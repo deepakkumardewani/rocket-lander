@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "sketchfab": {
+      "command": "node",
+      "args": [
+        "/Users/deepakdewani1/Documents/Programs/MCP/sketchfab-mcp-server/build/index.js",
+        "--api-key",
+        "21ff23f06b8947c09735847bc1ff3fd5"
+      ]
+    }
+  }
+}

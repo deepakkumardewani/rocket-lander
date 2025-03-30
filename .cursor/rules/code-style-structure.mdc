@@ -1,0 +1,26 @@
+---
+description: code-style-structure
+globs: *.vue,*.ts
+alwaysApply: false
+---
+### Code Style and Structure
+
+- Write concise, technical TypeScript code.
+- Use functional and declarative programming patterns; avoid classes.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoaded, hasError).
+- Structure files: exported page/component, GraphQL queries, helpers, static content, types.
+- Use tabs for indentation
+- Use single quotes for strings (except to avoid escaping)
+- Omit semicolons (unless required for disambiguation)
+- Eliminate unused variables
+- Add space after keywords
+- Add space before function declaration parentheses
+- Always use strict equality (===) instead of loose equality (==)
+- Space infix operators
+- Add space after commas
+- Keep else statements on the same line as closing curly braces
+- Use curly braces for multi-line if statements
+- Always handle error parameters in callbacks
+- Limit line length to 80 characters
+- Use trailing commas in multiline object/array literals

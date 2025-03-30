@@ -1,0 +1,87 @@
+---
+description: 
+globs: *.vue,*.ts
+alwaysApply: false
+---
+<!-- .cursor/rules/pinia-stores.mdc -->
+
+# Pinia Store Rules
+Description: Rules for creating and managing Pinia stores using the Setup API with TypeScript.
+
+Globs: 
+- src/stores/*.ts
+
+## Guidelines
+- Use `defineStore` with the Setup API (function syntax) instead of Options API.
+- Use `ref()` for reactive state variables.
+- Use `computed()` for getters.
+- Define actions as regular async or sync functions.
+- Always use TypeScript with explicit types for state, getters, and actions.
+- Keep stores modular and focused on a single domain.
+
+## Example
+```typescript
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+
+export const useRulesStore = defineStore('rules', () => {
+  // State
+  const rules = ref<string[]>([])
+  const isLoading = ref<boolean>(false)
+  const error = ref<string | null>(null)
+
+  // Getters
+  const ruleCount = computed(() => rules.value.length)
+  const hasRules = computed(() => rules.value.length > 0)
+
+  // Actions
+  async function fetchRules() {
+    try {
+      isLoading.value = true
+      const response = await new Promise<string[]>((resolve) => {
+        setTimeout(() => resolve(['Rule 1', 'Rule 2', 'Rule 3']), 1000)
+      })
+      rules.value = response
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to fetch rules'
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  function addRule(newRule: string) {
+    if (newRule.trim() && !rules.value.includes(newRule)) {
+      rules.value.push(newRule)
+    }
+  }
+
+  return {
+    rules,
+    isLoading,
+    error,
+    ruleCount,
+    hasRules,
+    fetchRules,
+    addRule
+  }
+})
+```
+
+## Destructuring from a Store
+- In order to extract properties from the store while keeping its reactivity, you need to use storeToRefs(). It will create refs for every reactive property. This is useful when you are only using state from the store but not calling any action. Note you can destructure actions directly from the store as they are bound to the store itself too:
+
+## Example
+```typescript
+<script setup>
+import { useCounterStore } from '@/stores/counter'
+import { storeToRefs } from 'pinia'
+
+const store = useCounterStore()
+// `name` and `doubleCount` are reactive refs
+// This will also extract refs for properties added by plugins
+// but skip any action or non reactive (non ref/reactive) property
+const { name, doubleCount } = storeToRefs(store)
+// the increment action can just be destructured
+const { increment } = store
+</script>
+```

@@ -1,0 +1,65 @@
+---
+description: game development
+globs: src/
+alwaysApply: false
+---
+## Rule 1: Use Vue 3 Composition API for Game Logic
+
+- When generating code for Vue components (e.g., `GameCanvas.vue`, `HUD.vue`), always use the Composition API (`setup()` or `<script setup>`).
+- Example: Use `ref` or `reactive` for game state (e.g., `fuel`, `score`) instead of Options API.
+- Why: Ensures consistency with modern Vue 3 practices and better integration with reactive Three.js updates.
+
+## Rule 2: Prioritize Three.js and Cannon.js Integration
+
+- When working with 3D or physics code, ensure Three.js objects (e.g., `Mesh`) are synced with Cannon.js bodies (e.g., `Body`) in the game loop.
+- Example: Always include `mesh.position.copy(body.position)` and `mesh.quaternion.copy(body.quaternion)` in the `animate` function.
+- Why: Maintains accurate physics-visual alignment critical for gameplay.
+
+## Rule 3: Optimize for Performance
+
+- Avoid unnecessary re-renders or heavy computations in the game loop.
+- Suggest optimizations like reusing Three.js geometries, limiting physics bodies, or using `requestAnimationFrame` efficiently.
+- Example: Do not create new `Vector3` objects per frame; reuse existing ones.
+- Why: Ensures smooth 60 FPS gameplay, especially on lower-end devices.
+
+## Rule 4: Follow Tailwind CSS Conventions
+
+- For UI components (e.g., HUD, menus), use Tailwind CSS utility classes instead of raw CSS.
+- Example: A fuel bar should be styled as `<div class="w-64 bg-gray-200 h-4"><div class="bg-green-500 h-4" :style="{ width: `${fuel}%` }"></div></div>`.
+- Why: Maintains consistency with the project’s styling approach and speeds up development.
+
+## Rule 5: Provide Physics-Based Suggestions
+
+- When suggesting code for rocket controls or collisions, base it on Cannon.js physics principles (e.g., `applyForce`, `velocity`).
+- Example: Thrust should use `rocketBody.applyForce(new CANNON.Vec3(0, 15, 0), rocketBody.position)` instead of direct position updates.
+- Why: Ensures realistic physics behavior central to _Rocket Lander_.
+
+## Rule 6: Include Reactive State Updates
+
+- When modifying game state (e.g., fuel, score), ensure Vue’s reactivity is respected by updating `ref` or `reactive` objects.
+- Example: `fuel.value -= 1` instead of `fuel -= 1` when thrusting.
+- Why: Prevents UI from desyncing with game logic.
+
+## Rule 7: Suggest Particle Effects with Three.js
+
+- For visual feedback (e.g., thrusters, crashes), propose lightweight `Points` or `BufferGeometry` implementations in Three.js.
+- Example: A thruster effect should use `Points` with a small texture and animate position downward.
+- Why: Enhances immersion while keeping performance in check.
+
+## Rule 8: Adhere to Game Design Constraints
+
+- Respect the game’s design: limited fuel (100 units max), scoring based on precision/velocity, and level-specific challenges (e.g., wind, moving platforms).
+- Example: Do not suggest infinite fuel or non-physics-based movement.
+- Why: Keeps AI suggestions aligned with gameplay mechanics.
+
+## Rule 9: Document Code with Comments
+
+- When generating code, include concise comments explaining key logic, especially for Three.js/Cannon.js interactions.
+- Example: `// Apply thrust upward based on player input` before `applyForce`.
+- Why: Improves maintainability for a senior developer reviewing or extending the codebase.
+
+## Rule 10: Validate Against Level Progression
+
+- When suggesting level-related code (e.g., terrain, platform size), ensure it fits the 5-level difficulty progression (e.g., smaller platforms, stronger wind).
+- Example: Level 4 should include `platformBody.position.x = Math.sin(Date.now() * 0.001) * 5` for movement.
+- Why: Ensures AI contributions scale with the game’s design goals.
