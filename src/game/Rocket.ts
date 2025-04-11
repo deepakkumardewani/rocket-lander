@@ -67,11 +67,17 @@ export class Rocket {
       this.body = new CANNON.Body({
         mass: 1, // kg
         material: this.rocketMaterial,
-        shape: new CANNON.Cylinder(0.5, 0.5, 2, 8), // Simplified collision shape
+        shape: new CANNON.Cylinder(0.1, 0.1, 0.4, 8), // Scale dimensions to match visual model (0.2 * original size)
         position: new CANNON.Vec3(position.x, position.y, position.z),
         linearDamping: 0.1, // Air resistance for linear motion
         angularDamping: 0.5, // Air resistance for rotation
       });
+
+      // Adjust the shape offset so the bottom of the cylinder contacts surfaces
+      const cylinderHeight = 0.2; // Height of the cylinder shape (scaled to match visual)
+      this.body.shapeOffsets[0].set(0, -cylinderHeight / 2, 0);
+      this.body.updateMassProperties();
+      this.body.updateBoundingRadius();
 
       // Add body to physics world
       world.addBody(this.body);

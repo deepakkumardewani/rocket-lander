@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import { world } from "./physics";
 
 export class Terrain {
   private mesh: THREE.Mesh;
@@ -40,13 +41,24 @@ export class Terrain {
     const shape = new CANNON.Heightfield(heightMap, {
       elementSize: width / (segments - 1),
     });
-    this.body = new CANNON.Body({ mass: 0 });
+    this.body = new CANNON.Body({
+      mass: 0, // Static body
+      type: CANNON.Body.STATIC,
+    });
     this.body.addShape(shape);
     this.body.position.set(0, -5, 0);
     this.body.quaternion.setFromAxisAngle(
       new CANNON.Vec3(1, 0, 0),
       -Math.PI / 2
     );
+
+    // Store a reference to this object for easier access in collision handling
+    this.mesh.userData.owner = this;
+    // Use type assertion for userData since it's not in the type definition
+    (this.body as any).userData = { type: "terrain", owner: this };
+
+    // Add the body to the physics world
+    world.addBody(this.body);
   }
 
   private generateHeightMap(): number[][] {

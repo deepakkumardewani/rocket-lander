@@ -9,7 +9,7 @@ import { ParticleSystem } from "./particleSystem";
 
 // Constants for successful landing criteria
 const MAX_LANDING_VELOCITY = 5; // Maximum vertical velocity for a safe landing (m/s)
-const MAX_LANDING_ANGLE = 25; // Maximum angle from vertical for a safe landing (degrees)
+const MAX_LANDING_ANGLE = 5; // Maximum angle from vertical for a safe landing (degrees)
 
 // Crash particle system for reuse across all collisions
 let crashParticles: ParticleSystem | null = null;
@@ -78,11 +78,15 @@ function checkLandingSuccess(rocketBody: CANNON.Body): {
  * Sets up collision detection between rocket and platform
  * @param rocketBody The rocket's physics body
  * @param platformBody The platform's physics body
+ * @param onSuccessfulLanding Callback function to execute on successful landing
+ * @param onCrash Callback function to execute on crash
  * @returns A cleanup function to remove event listeners
  */
 export function setupCollisionDetection(
   rocketBody: CANNON.Body,
-  platformBody: CANNON.Body
+  platformBody: CANNON.Body,
+  onSuccessfulLanding?: () => void,
+  onCrash?: () => void
 ): () => void {
   const gameStore = useGameStore();
 
@@ -99,17 +103,17 @@ export function setupCollisionDetection(
   try {
     // Set up rocket collision event listener
     const cleanup = onCollision(rocketBody, (event) => {
+      // Prevent handling multiple collisions after landing
+      if (
+        gameStore.gameState === "landed" ||
+        gameStore.gameState === "crashed"
+      ) {
+        return;
+      }
+
       // Check if the collision is with the platform
       if (event.body === platformBody) {
         console.log("Collision detected between rocket and platform");
-
-        // Prevent handling multiple collisions after landing
-        if (
-          gameStore.gameState === "landed" ||
-          gameStore.gameState === "crashed"
-        ) {
-          return;
-        }
 
         // Check if landing was successful
         const landingResult = checkLandingSuccess(rocketBody);
@@ -127,6 +131,11 @@ export function setupCollisionDetection(
           gameStore.calculateScore(landingResult.metrics);
 
           console.log("Successful landing! Score:", gameStore.score);
+
+          // Call success callback if provided
+          if (onSuccessfulLanding) {
+            onSuccessfulLanding();
+          }
         } else {
           // Failed landing - rocket crashed
           gameStore.setGameState("crashed");
@@ -149,6 +158,37 @@ export function setupCollisionDetection(
               100 // Spawn many particles for dramatic effect
             );
           }
+
+          // Call crash callback if provided
+          if (onCrash) {
+            onCrash();
+          }
+        }
+      } else {
+        // Collision with anything other than the platform (terrain, etc) is an automatic crash
+        gameStore.setGameState("crashed");
+        console.log("Rocket crashed into terrain or other object");
+
+        // Spawn crash particles
+        if (crashParticles) {
+          const position = new THREE.Vector3(
+            rocketBody.position.x,
+            rocketBody.position.y,
+            rocketBody.position.z
+          );
+
+          crashParticles.spawn(
+            position,
+            new THREE.Vector3(0, 1, 0),
+            Math.PI,
+            5,
+            100
+          );
+        }
+
+        // Call crash callback if provided
+        if (onCrash) {
+          onCrash();
         }
       }
     });
@@ -166,13 +206,22 @@ export function setupCollisionDetection(
  * This is a convenience function to be called from GameCanvas
  * @param rocketBody The rocket's physics body
  * @param platformBody The platform's physics body
+ * @param onSuccessfulLanding Callback function to execute on successful landing
+ * @param onCrash Callback function to execute on crash
  * @returns A cleanup function to remove event listeners
  */
 export function registerCollisionHandlers(
   rocketBody: CANNON.Body,
-  platformBody: CANNON.Body
+  platformBody: CANNON.Body,
+  onSuccessfulLanding?: () => void,
+  onCrash?: () => void
 ): () => void {
-  return setupCollisionDetection(rocketBody, platformBody);
+  return setupCollisionDetection(
+    rocketBody,
+    platformBody,
+    onSuccessfulLanding,
+    onCrash
+  );
 }
 
 /**
