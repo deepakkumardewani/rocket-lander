@@ -41,11 +41,13 @@ export class AssetLoader {
   private audioContext: AudioContext | null;
   private loadedTextures: Map<string, THREE.Texture>;
   private loadedSkyboxTextures: THREE.Texture[];
+  private activeSources: Map<string, AudioBufferSourceNode>;
 
   constructor() {
     this.textures = new Map();
     this.models = new Map();
     this.audio = new Map();
+    this.activeSources = new Map();
 
     // Create a loading manager to track progress across all assets
     this.loadingManager = new THREE.LoadingManager();
@@ -267,6 +269,9 @@ export class AssetLoader {
         return;
       }
 
+      // Stop any previously playing instances of this sound
+      this.stopAudio(key);
+
       const source = this.audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.loop = loop;
@@ -280,6 +285,14 @@ export class AssetLoader {
       gainNode.connect(this.audioContext.destination);
 
       source.start(0);
+
+      // Store the source for potential stopping later
+      this.activeSources.set(key, source);
+
+      // When the source ends naturally, remove it from active sources
+      source.onended = () => {
+        this.activeSources.delete(key);
+      };
     } catch (error) {
       handleAssetError(
         `Failed to play audio: ${key}`,
@@ -288,8 +301,34 @@ export class AssetLoader {
     }
   }
 
+  // Stop audio by key
+  public stopAudio(key: string): void {
+    try {
+      const source = this.activeSources.get(key);
+      if (source) {
+        source.stop();
+        this.activeSources.delete(key);
+      }
+    } catch (error) {
+      handleAssetError(
+        `Failed to stop audio: ${key}`,
+        error instanceof Error ? error : new Error(String(error))
+      );
+    }
+  }
+
   // Dispose of loaded assets to free memory
   public dispose(): void {
+    // Stop all playing audio
+    this.activeSources.forEach((source) => {
+      try {
+        source.stop();
+      } catch (error) {
+        // Ignore errors when stopping audio during disposal
+      }
+    });
+    this.activeSources.clear();
+
     // Dispose textures
     this.textures.forEach((texture) => texture.dispose());
     this.textures.clear();
@@ -337,6 +376,30 @@ export class AssetLoader {
       return this.loadedSkyboxTextures;
     } catch (error) {
       console.error("Failed to load skybox textures:", error);
+      throw error;
+    }
+  }
+
+  // Load star texture for particle systems
+  async loadStarTexture(): Promise<THREE.Texture> {
+    try {
+      const starTexture = await this.textureLoader.loadAsync(
+        "/src/assets/textures/stars/star.svg"
+      );
+
+      // Configure texture for optimal star appearance
+      starTexture.wrapS = THREE.ClampToEdgeWrapping;
+      starTexture.wrapT = THREE.ClampToEdgeWrapping;
+      starTexture.magFilter = THREE.LinearFilter;
+      starTexture.minFilter = THREE.LinearFilter;
+
+      // Store texture in the map
+      this.textures.set("star", starTexture);
+
+      console.log("Star texture loaded successfully");
+      return starTexture;
+    } catch (error) {
+      console.error("Failed to load star texture:", error);
       throw error;
     }
   }
