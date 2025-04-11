@@ -20,6 +20,8 @@ import {
 } from "./collisionHandler";
 import { assetLoader, AssetType } from "../utils/assetLoader";
 import HUD from "../components/HUD.vue";
+import LoadingScreen from "../components/LoadingScreen.vue";
+import EffectsPanel from "../components/EffectsPanel.vue";
 import { Terrain } from "./Terrain";
 
 // Create refs for the scene elements
@@ -32,13 +34,36 @@ let platform: Platform | null = null;
 let terrain: Terrain | null = null;
 let animationFrameId: number | null = null;
 let cleanupCollisionHandlers: (() => void) | null = null;
+const hudRef = ref<InstanceType<typeof HUD> | null>(null);
+
+// Interval references for cleanup
+let shootingStarInterval: number | null = null;
+let auroraInterval: number | null = null;
+
+// Watch for hudRef changes to properly connect it to SceneManager
+watch(
+  hudRef,
+  (newHudRef) => {
+    if (newHudRef && sceneManager) {
+      sceneManager.setHUDRef(newHudRef);
+    }
+  },
+  { flush: "post" }
+);
+
+// Sound state tracking
+let isThrusterSoundPlaying = false;
+let lastRocketVelocityY = 0;
+const LANDING_SOUND_VELOCITY_THRESHOLD = -2; // Velocity threshold to play landing sound
 
 // Get the game store
 const gameStore = useGameStore();
 
 // Constants for game physics
 const THRUST_FORCE = 15; // Force magnitude for rocket thrust
-const FUEL_CONSUMPTION_RATE = -0.5; // Fuel consumed per frame when thrusting
+const FUEL_CONSUMPTION_RATE = -0.05; // Fuel consumed per frame when thrusting (reduced from -0.5)
+const ROTATION_SPEED = 1; // Angular velocity for rotation (radians/second)
+const ROTATION_DAMPING = 0.95; // Damping factor for rotation
 
 // Function to load all game assets
 const loadGameAssets = async (): Promise<void> => {
@@ -50,6 +75,22 @@ const loadGameAssets = async (): Promise<void> => {
         url: "/models/rocket.glb",
         key: "rocket",
       },
+      // Add sound effects
+      {
+        type: AssetType.AUDIO,
+        url: "/src/assets/sounds/rocket-thrust.mp3",
+        key: "rocket-thrust",
+      },
+      {
+        type: AssetType.AUDIO,
+        url: "/src/assets/sounds/rocket-landing.mp3",
+        key: "rocket-landing",
+      },
+      {
+        type: AssetType.AUDIO,
+        url: "/src/assets/sounds/missile-explosion.mp3",
+        key: "missile-explosion",
+      },
     ];
 
     // Set up loading manager progress tracking
@@ -57,6 +98,10 @@ const loadGameAssets = async (): Promise<void> => {
       loadingProgress.value = Math.round((itemsLoaded / itemsTotal) * 100);
       console.log(`Loading: ${loadingProgress.value}% (${url})`);
     };
+
+    // Initialize audio context (must be called after user interaction)
+    // We'll initialize it here for loading, but it won't produce sound until user interacts
+    assetLoader.initAudioContext();
 
     // Load all assets
     await assetLoader.loadAssets(assetsToLoad);
@@ -67,12 +112,15 @@ const loadGameAssets = async (): Promise<void> => {
     // Load skybox textures
     const skyboxTextures = await assetLoader.loadSkyboxTextures();
 
+    // Load star texture
+    const starTexture = await assetLoader.loadStarTexture();
+
     // Assets loaded successfully
     isLoading.value = false;
     console.log("All assets loaded successfully");
 
     // Initialize the game scene
-    initializeGameScene(skyboxTextures);
+    initializeGameScene(skyboxTextures, starTexture);
   } catch (error) {
     handleAssetError(
       "Failed to load game assets",
@@ -83,7 +131,10 @@ const loadGameAssets = async (): Promise<void> => {
 };
 
 // Initialize game objects and start the animation loop
-const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
+const initializeGameScene = (
+  skyboxTextures: THREE.Texture[],
+  starTexture: THREE.Texture
+) => {
   if (!canvasContainer.value) return;
 
   try {
@@ -93,15 +144,34 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
     // Create skybox
     sceneManager.createSkybox(skyboxTextures);
 
+    // Create a dynamic star field
+    sceneManager.createStarField({
+      starCount: 2000,
+      radius: 95,
+      minSize: 0.1,
+      maxSize: 0.5,
+      movementSpeed: 0.1,
+      movementPattern: "radial",
+      texture: starTexture,
+    });
+
+    // Create celestial objects (planets and moons)
+    sceneManager.createCelestialObjects();
+
+    // Create shooting stars system
+    sceneManager.createShootingStars({
+      maxShootingStars: 5,
+      maxTrailLength: 20,
+      minSpawnInterval: 8,
+      maxSpawnInterval: 20,
+      texture: starTexture,
+    });
+
     // Create and add the terrain
     terrain = new Terrain();
     sceneManager.scene.add(terrain.getMesh());
-    // Add terrain body to physics world
-    const terrainBody = terrain.getBody();
-    if (terrainBody) {
-      // The body is already added to the world in the Terrain constructor
-      console.log("Terrain added to physics world");
-    }
+    // The terrain body is already added to the world in the Terrain constructor
+    console.log("Terrain added to scene");
 
     // Get the current texture choice from game store
     const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
@@ -116,11 +186,27 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
     rocket = new Rocket();
     rocket.addToScene(sceneManager.scene);
 
+    // Initially set rocket to static in waiting mode
+    if (gameStore.gameState === "waiting") {
+      rocket.getBody().type = CANNON.Body.STATIC;
+    }
+
     // Set up collision detection between rocket and platform
     if (rocket && platform) {
       cleanupCollisionHandlers = registerCollisionHandlers(
         rocket.getBody(),
-        platform.getBody()
+        platform.getBody(),
+        // Add callback for successful landing
+        () => {
+          // Play landing sound when successfully landed
+          // assetLoader.playAudio("rocket-landing", false, 0.7);
+        },
+        // Add callback for crash
+        () => {
+          // Play explosion sound when crashed
+          console.log("Playing explosion sound");
+          assetLoader.playAudio("missile-explosion", false, 0.8);
+        }
       );
 
       // Add crash particles to the scene
@@ -128,6 +214,27 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
       if (crashParticles) {
         sceneManager.scene.add(crashParticles.getMesh());
       }
+    }
+
+    // Add collision detection between rocket and terrain
+    if (rocket && terrain) {
+      const terrainCleanup = registerCollisionHandlers(
+        rocket.getBody(),
+        terrain.getBody(),
+        undefined, // No successful landing on terrain
+        () => {
+          // Play explosion sound when crashing into terrain
+          console.log("Rocket crashed into terrain");
+          assetLoader.playAudio("missile-explosion", false, 0.8);
+        }
+      );
+
+      // Combine cleanup functions
+      const previousCleanup = cleanupCollisionHandlers;
+      cleanupCollisionHandlers = () => {
+        if (previousCleanup) previousCleanup();
+        terrainCleanup();
+      };
     }
 
     // Watch for texture choice changes to update platform
@@ -143,6 +250,20 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
       }
     );
 
+    // Watch for game state changes to handle sound effects
+    watch(
+      () => gameStore.gameState,
+      (newState) => {
+        // Stop thruster sound when game state changes to landed or crashed
+        if (newState === "landed" || newState === "crashed") {
+          if (isThrusterSoundPlaying) {
+            assetLoader.stopAudio("rocket-thrust");
+            isThrusterSoundPlaying = false;
+          }
+        }
+      }
+    );
+
     // Animation loop
     const animate = () => {
       if (!sceneManager || !rocket) return;
@@ -152,6 +273,23 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
 
       // Sync the rocket mesh with its physics body
       syncMeshWithBody(rocket.getMesh(), rocket.getBody());
+
+      // Track the rocket's velocity for landing sound
+      if (rocket && gameStore.gameState === "flying") {
+        const rocketBody = rocket.getBody();
+        const currentVelY = rocketBody.velocity.y;
+
+        // If rocket is descending (negative velocity) and then suddenly slows down (approaching platform)
+        // This indicates it might be approaching the landing pad
+        if (
+          lastRocketVelocityY < LANDING_SOUND_VELOCITY_THRESHOLD &&
+          Math.abs(currentVelY) < 0.5
+        ) {
+          assetLoader.playAudio("rocket-landing", false, 0.3); // Play at lower volume when approaching
+        }
+
+        lastRocketVelocityY = currentVelY;
+      }
 
       // Process input
       processInput();
@@ -193,10 +331,33 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
         rocketBody.mass = 1;
         rocketBody.updateMassProperties();
 
+        // Stop any playing thruster sound when resetting
+        isThrusterSoundPlaying = false;
+
         // Reset game state
         gameStore.resetGame();
-        console.log("Game reset");
         return;
+      }
+
+      // Waiting for space to start the game
+      if (gameStore.gameState === "waiting") {
+        if (inputHandler.isKeyPressed(" ")) {
+          // Transition to pre-launch state
+          gameStore.setGameState("pre-launch");
+        }
+
+        // While in waiting state, make the rocket static (not affected by gravity)
+        const rocketBody = rocket.getBody();
+        rocketBody.type = CANNON.Body.STATIC;
+        return;
+      } else if (gameStore.gameState === "pre-launch") {
+        // When in pre-launch, make the rocket dynamic again (affected by gravity)
+        const rocketBody = rocket.getBody();
+        if (rocketBody.type === CANNON.Body.STATIC) {
+          rocketBody.type = CANNON.Body.DYNAMIC;
+          rocketBody.mass = 1;
+          rocketBody.updateMassProperties();
+        }
       }
 
       // Don't process other input if the rocket has landed or crashed
@@ -204,6 +365,11 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
         gameStore.gameState === "landed" ||
         gameStore.gameState === "crashed"
       ) {
+        // Stop thruster sound if it was playing
+        if (isThrusterSoundPlaying) {
+          assetLoader.stopAudio("rocket-thrust");
+          isThrusterSoundPlaying = false;
+        }
         return;
       }
 
@@ -217,21 +383,26 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
         gameStore.setGameState("flying");
       }
 
-      // Apply tilt controls
+      const rocketBody = rocket.getBody();
+
+      // Apply tilt controls with smooth damping
       if (inputHandler.isTiltLeft()) {
-        // Apply positive angular velocity around z-axis for counterclockwise rotation
-        rocket.getBody().angularVelocity.set(0, 0, 1);
-        console.log("Tilt Left");
+        // Apply controlled rotation speed
+        rocketBody.angularVelocity.z = ROTATION_SPEED;
       } else if (inputHandler.isTiltRight()) {
-        // Apply negative angular velocity around z-axis for clockwise rotation
-        rocket.getBody().angularVelocity.set(0, 0, -1);
-        console.log("Tilt Right");
+        // Apply controlled rotation speed in opposite direction
+        rocketBody.angularVelocity.z = -ROTATION_SPEED;
       } else {
-        // When neither key is pressed, let the angular damping slow rotation naturally
-        // We only zero out the Z component to allow physics to handle the rest
-        rocket.getBody().angularVelocity.x = 0;
-        rocket.getBody().angularVelocity.y = 0;
+        // Apply damping to smoothly stop rotation
+        rocketBody.angularVelocity.z *= ROTATION_DAMPING;
+        if (Math.abs(rocketBody.angularVelocity.z) < 0.01) {
+          rocketBody.angularVelocity.z = 0;
+        }
       }
+
+      // Keep other angular velocities at 0 to prevent unwanted rotation
+      rocketBody.angularVelocity.x = 0;
+      rocketBody.angularVelocity.y = 0;
 
       // Apply thrust when spacebar is pressed and there's fuel remaining
       if (
@@ -241,17 +412,14 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
       ) {
         // Calculate thrust direction based on rocket's current orientation
         const thrustDirection = new CANNON.Vec3(0, 1, 0); // Local "up" vector
-        const worldThrustDirection = rocket
-          .getBody()
-          .quaternion.vmult(thrustDirection);
+        const worldThrustDirection =
+          rocketBody.quaternion.vmult(thrustDirection);
 
-        // Apply the force to the rocket body
-        rocket
-          .getBody()
-          .applyForce(
-            worldThrustDirection.scale(THRUST_FORCE),
-            rocket.getBody().position
-          );
+        // Apply the force through the center of mass to prevent unwanted rotation
+        rocketBody.applyForce(
+          worldThrustDirection.scale(THRUST_FORCE),
+          new CANNON.Vec3(0, 0, 0) // Apply force at center of mass
+        );
 
         // Consume fuel
         gameStore.updateFuel(FUEL_CONSUMPTION_RATE);
@@ -259,7 +427,15 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
         // Emit thruster particles
         rocket.emitThrusterParticles(5);
 
-        console.log("Thrust applied, fuel remaining:", gameStore.fuel);
+        // Play thruster sound if not already playing
+        if (!isThrusterSoundPlaying) {
+          assetLoader.playAudio("rocket-thrust", true, 0.4); // Loop the thrust sound
+          isThrusterSoundPlaying = true;
+        }
+      } else if (isThrusterSoundPlaying) {
+        // Stop thruster sound when not thrusting
+        assetLoader.stopAudio("rocket-thrust");
+        isThrusterSoundPlaying = false;
       }
     };
 
@@ -270,6 +446,90 @@ const initializeGameScene = (skyboxTextures: THREE.Texture[]) => {
       "Error in animation loop"
     );
     safeAnimate();
+
+    // Initialize audio after user interaction
+    document.addEventListener(
+      "click",
+      () => {
+        assetLoader.initAudioContext();
+      },
+      { once: true }
+    );
+
+    document.addEventListener(
+      "keydown",
+      () => {
+        assetLoader.initAudioContext();
+      },
+      { once: true }
+    );
+
+    // Create a star field
+    sceneManager.createStarField({
+      starCount: 2000,
+      radius: 90,
+      movementPattern: "radial",
+      texture: assetLoader.getTexture("star"),
+    });
+
+    // Create celestial objects (planets/moons)
+    sceneManager.createCelestialObjects();
+
+    // Create shooting stars effect
+    sceneManager.createShootingStars({
+      maxShootingStars: 3,
+      minSpawnInterval: 10,
+      maxSpawnInterval: 30,
+      texture: assetLoader.getTexture("star"),
+    });
+
+    // Create nebula effect (Phase 5, Step 17)
+    sceneManager.createNebula({
+      planeCount: 5,
+      planeSize: 120,
+      opacity: 0.15,
+      distribution: 60,
+      colors: [
+        new THREE.Color(0x3311cc), // Deep purple
+        new THREE.Color(0x0066ff), // Blue
+        new THREE.Color(0xff3377), // Pink
+      ],
+    });
+
+    // Create aurora effect (Phase 5, Step 18)
+    sceneManager.createAurora({
+      radius: 100,
+      baseColor: new THREE.Color(0x00ff99), // Green
+      secondaryColor: new THREE.Color(0x4455ff), // Blue
+      initialIntensity: 0.4, // Start partially visible
+    });
+
+    // Find a bright star or planet for the lens flare
+    // Use position of the blue gas giant from CelestialObjects.ts
+    const flareSourcePosition = new THREE.Vector3(40, 25, -70);
+
+    // Create lens flare effect (Phase 5, Step 19)
+    sceneManager.createLensFlare({
+      sourcePosition: flareSourcePosition,
+      flareColor: new THREE.Color(0xffffcc), // Warm yellow
+      size: 15,
+      intensity: 0.8,
+    });
+
+    // Trigger some effects for demonstration
+    // Shooting star every 10 seconds
+    shootingStarInterval = window.setInterval(() => {
+      if (sceneManager) {
+        sceneManager.triggerShootingStar();
+      }
+    }, 10000);
+
+    // Aurora effect that pulses every 30 seconds
+    auroraInterval = window.setInterval(() => {
+      if (sceneManager) {
+        sceneManager.triggerAurora(0.8, 5); // 0.8 intensity for 5 seconds
+      }
+    }, 30000);
   } catch (error) {
     handleRenderingError("Failed to initialize game canvas", error as Error);
   }
@@ -284,6 +544,14 @@ onUnmounted(() => {
   // Cancel animation frame
   if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId);
+  }
+
+  // Clear effect intervals
+  if (shootingStarInterval !== null) {
+    clearInterval(shootingStarInterval);
+  }
+  if (auroraInterval !== null) {
+    clearInterval(auroraInterval);
   }
 
   // Clean up collision handlers
@@ -324,18 +592,29 @@ onUnmounted(() => {
 
 <template>
   <div id="canvas" ref="canvasContainer" class="w-full h-full">
-    <!-- Loading screen overlay -->
-    <div v-if="isLoading" class="loading-overlay">
-      <div class="loading-content">
-        <div>Loading game assets: {{ loadingProgress }}%</div>
-        <div class="loading-bar-container">
-          <div class="loading-bar" :style="`width: ${loadingProgress}%`"></div>
-        </div>
-      </div>
+    <!-- Loading Screen -->
+    <LoadingScreen v-if="isLoading" :progress="loadingProgress" />
+
+    <!-- Start Instruction -->
+    <div
+      v-if="!isLoading && gameStore.gameState === 'waiting'"
+      class="start-instruction"
+    >
+      Press Space to Start
     </div>
 
-    <!-- HUD Component -->
-    <HUD v-if="!isLoading" />
+    <!-- HUD -->
+    <HUD
+      v-if="!isLoading && sceneManager"
+      ref="hudRef"
+      :scene-manager="sceneManager"
+    />
+
+    <!-- Effects Panel Component -->
+    <EffectsPanel
+      v-if="!isLoading && sceneManager"
+      :scene-manager="sceneManager"
+    />
   </div>
 </template>
 
@@ -347,37 +626,33 @@ onUnmounted(() => {
   position: relative;
 }
 
-.loading-overlay {
+.start-instruction {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: rgba(17, 24, 39, 0.9); /* bg-gray-900 with opacity */
-  z-index: 10;
-}
-
-.loading-content {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
   color: white;
-  font-size: 1.25rem;
-  text-align: center;
+  text-shadow: 0 0 10px rgba(0, 200, 255, 0.8);
+  animation: pulse 1.5s infinite ease-in-out;
+  z-index: 10;
+  pointer-events: none;
+  font-family: "Arial", sans-serif;
+  letter-spacing: 2px;
 }
 
-.loading-bar-container {
-  width: 300px;
-  height: 20px;
-  background-color: #374151; /* bg-gray-700 */
-  border-radius: 4px;
-  margin-top: 10px;
-  overflow: hidden;
-}
-
-.loading-bar {
-  height: 100%;
-  background-color: #10b981; /* bg-green-500 */
-  transition: width 0.3s ease;
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
 }
 </style>
