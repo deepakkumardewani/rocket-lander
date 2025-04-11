@@ -2,7 +2,12 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 
 // Game state types
-export type GameState = "pre-launch" | "flying" | "landed" | "crashed";
+export type GameState =
+  | "waiting"
+  | "pre-launch"
+  | "flying"
+  | "landed"
+  | "crashed";
 export type TextureType = "metal" | "neon";
 
 export interface LandingMetrics {
@@ -34,7 +39,7 @@ export const useGameStore = defineStore("game", () => {
   const fuel = ref<number>(100);
   const score = ref<number>(0);
   const isLanded = ref<boolean>(false);
-  const gameState = ref<GameState>("pre-launch");
+  const gameState = ref<GameState>("waiting");
   const textureChoice = ref<TextureType>("metal");
 
   // Getters (computed values)
@@ -47,11 +52,15 @@ export const useGameStore = defineStore("game", () => {
   );
 
   /**
-   * Update the fuel amount
+   * Update the fuel amount with higher precision
    * @param amount - Amount to change (negative for consumption)
    */
   function updateFuel(amount: number): void {
-    fuel.value = Math.max(0, Math.min(100, fuel.value + amount));
+    // Keep full precision for calculations, only clamp values to valid range
+    const newFuel = Math.max(0, Math.min(100, fuel.value + amount));
+
+    // Update the fuel value with full precision (no rounding)
+    fuel.value = newFuel;
 
     // If we run out of fuel, update the game state
     if (fuel.value <= 0 && gameState.value === "flying") {
@@ -111,7 +120,7 @@ export const useGameStore = defineStore("game", () => {
     fuel.value = 100;
     score.value = 0;
     isLanded.value = false;
-    gameState.value = "pre-launch";
+    gameState.value = "waiting";
     // Keep texture choice as is when resetting game
 
     return {
