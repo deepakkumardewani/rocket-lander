@@ -254,6 +254,78 @@
 - Added shadow receiving to terrain mesh
 - Positioned terrain at appropriate height in the scene
 
+### Step 5: Enhance Star Visuals
+
+✅ **Completed**
+
+- Created star texture in `/src/assets/textures/stars/star.svg` using vector graphics
+- Added `loadStarTexture` method to AssetLoader for loading star textures
+- Enhanced StarField class with the following features:
+  - Added texture support for more realistic star appearance
+  - Implemented color variation based on real star distribution (blue-white, white, yellow, orange, red)
+  - Created a star twinkling effect with time-based opacity variations
+  - Added performance optimization to reduce visual updates
+  - Implemented a layered star field with depth for parallax effect:
+    - Front layer (60% of stars): faster movement
+    - Middle layer (30% of stars): medium movement
+    - Background layer (10% of stars): slower movement
+  - Added variable star sizes based on distance to create depth perception
+- Updated GameCanvas and SceneManager to use the enhanced star field
+- Added proper texture disposal in cleanup methods
+
+### Phase 3: Add Celestial Objects
+
+✅ **Completed**
+
+#### Step 10: Add Distant Planets/Moons
+
+- Created `src/game/CelestialObjects.ts` class for managing celestial objects
+- Implemented the following functionality:
+  - Method to create spherical planets/moons at specified positions
+  - Support for solid colors or texture-based materials
+  - Custom parameters for radius, color, and positions
+  - Automatic generation of predefined set of celestial objects, including:
+    - A blue gas giant positioned in the distance
+    - A reddish-orange planet (Mars-like)
+    - A small grayish moon
+  - Added automatic rotation for planets with randomized speed
+  - Integrated with SceneManager for proper initialization and updates
+- Updated SceneManager with createCelestialObjects method
+- Updated GameCanvas.vue to initialize celestial objects
+
+#### Step 11: Implement Planet Glow Effect
+
+- Extended CelestialObjects class with glow shader implementation:
+  - Created custom vertex and fragment shaders for the glow effect
+  - Added parameters to control glow color, intensity, and size
+  - Implemented proper blending for realistic atmospheric glow
+  - Created larger transparent sphere around planets for glow effect
+  - Added support for different glow colors for each planet type
+- Ensured glow effect positions match planet positions during updates
+- Used THREE.ShaderMaterial with additive blending for the glow effect
+- Implemented proper cleanup of glow resources in dispose method
+
+#### Step 12: Add Occasional Shooting Stars
+
+- Created `src/game/ShootingStars.ts` class for shooting star effects
+- Implemented the following functionality:
+  - Automated spawning of shooting stars with configurable time intervals
+  - Trail effect using particle system with fading opacity
+  - Random generation of shooting star trajectories
+  - Dynamic sizing of particles based on position in trail
+  - Support for manually triggering shooting stars
+  - Proper cleanup of resources when out of bounds
+- Added the following parameters:
+  - Maximum number of simultaneous shooting stars
+  - Trail length for each shooting star
+  - Spawn interval range (min/max)
+  - Support for texture application
+- Updated SceneManager with createShootingStars and triggerShootingStar methods
+- Updated GameCanvas.vue to initialize shooting stars with appropriate configuration
+- Added proper disposal methods for cleanup
+
+These enhancements create a more dynamic and visually interesting space environment with occasional shooting stars, distant planets with atmospheric glow effects, and a vibrant star field. The implementation follows a modular approach with proper resource management and consistent integration with the existing scene architecture.
+
 ## Feature 2: Neon or Metallic Textures for Platforms
 
 ### Step 6: Load Platform Textures in AssetLoader
@@ -336,3 +408,161 @@
   - Update crash particles in the animation loop
 - Tested crash particles by intentionally landing the rocket incorrectly
 - Verified that red particle explosion appears at crash location
+
+## Feature 4: Dynamic Shadows and Ambient Lighting
+
+### Step 12: Enable Shadow Casting in Renderer
+
+✅ **Completed**
+
+- Updated `src/game/sceneManager.ts` to enhance the `createRenderer` function:
+  - Set `renderer.shadowMap.enabled = true`
+  - Set `renderer.shadowMap.type = THREE.PCFSoftShadowMap` for better shadow quality
+  - Added conditional setting for color space to improve lighting appearance
+- Made sure the renderer uses a reasonable shadow map size (1024x1024)
+- Ensured compatibility with current THREE.js version by using feature detection
+
+### Step 13: Add a Directional Light with Shadows
+
+✅ **Completed**
+
+- Enhanced the directional light in `src/game/sceneManager.ts`:
+  - Positioned it at `(10, 20, 10)` with lookAt point at `(0, 0, 0)`
+  - Set intensity to 1.0 for proper illumination
+  - Enabled `castShadow = true` with detailed shadow camera configuration
+  - Configured shadow camera bounds (left: -20, right: 20, top: 20, bottom: -20)
+  - Set near and far planes for optimal shadow quality (near: 0.1, far: 50)
+  - Added shadow bias to reduce shadow acne
+- Prepared (but commented out) a shadow camera helper for development purposes
+- Ensured consistent lighting settings between the SceneManager class and standalone functions
+
+### Step 14: Enable Shadow Casting and Receiving
+
+✅ **Completed**
+
+- Verified that `src/game/Rocket.ts` already has proper shadow settings:
+  - Each mesh in the rocket model has `castShadow = true` and `receiveShadow = true`
+- Confirmed that `src/game/Platform.ts` has proper shadow settings:
+  - Platform mesh has `castShadow = true` and `receiveShadow = true`
+- Confirmed that `src/game/Terrain.ts` has proper shadow settings:
+  - Terrain mesh has `receiveShadow = true` for ground shadows
+
+### Step 15: Add Ambient Lighting
+
+✅ **Completed**
+
+- Updated ambient lighting in `src/game/sceneManager.ts`:
+  - Set up a THREE.AmbientLight with color `0x404040` (dark gray)
+  - Set intensity to 0.3 for subtle overall illumination without washing out directional shadows
+  - Ensured consistent ambient light settings in both the class and standalone function
+
+## Phase 5: Skybox Polish and Extras
+
+### Step 17: Add Nebula or Space Dust
+
+✅ **Completed**
+
+- Created `src/game/Nebula.ts` to implement space dust and nebula effects:
+  - Implemented a nebula class that creates multiple layered transparent planes with noise textures
+  - Added shader-based implementations for realistic volumetric nebula effects
+  - Used custom fragment shader with time-based animation for subtle movement
+  - Created a procedural noise texture generator for when no external texture is provided
+  - Implemented proper disposal methods for all resources
+  - Added performance-friendly blending and transparency settings
+- Updated `src/game/sceneManager.ts` to integrate nebula effects:
+  - Added createNebula method to instantiate and configure nebula effects
+  - Added update loop integration to animate nebula planes
+  - Implemented proper disposal in the cleanup method
+- Updated `src/game/GameCanvas.vue` to:
+  - Initialize nebula effect with configurable parameters
+  - Set up custom colors for a visually appealing nebula
+  - Configure proper size and distribution for the nebula planes
+- Tested the implementation to ensure:
+  - Nebula renders with proper transparency and doesn't affect performance
+  - The effect creates a subtle volumetric feeling for distant space dust
+  - Very slow movement creates a living universe feeling
+
+### Step 18: Implement Aurora-like Effects
+
+✅ **Completed**
+
+- Created `src/game/Aurora.ts` to implement aurora effects near the horizon:
+  - Used a half-cylinder geometry to create the aurora curtain effect
+  - Implemented custom vertex and fragment shaders for the dynamic aurora effect
+  - Added simplex noise implementation for natural-looking aurora patterns
+  - Created parameters for aurora color, intensity, and movement
+  - Added triggering mechanism to show/hide aurora at specific times
+  - Implemented smooth fade-in/fade-out transitions
+- Updated `src/game/sceneManager.ts` to integrate aurora effects:
+  - Added createAurora method to instantiate and configure the aurora
+  - Added triggerAurora method to control aurora visibility
+  - Added update loop integration for aurora animation
+  - Implemented proper disposal in the cleanup method
+- Updated `src/game/GameCanvas.vue` to:
+  - Initialize aurora with configurable parameters
+  - Set up green and blue colors typical for aurora effects
+  - Add periodic aurora triggering for special game events
+- Tested the implementation to ensure:
+  - Aurora renders correctly with proper transparency
+  - The effect is visible primarily near the horizon
+  - The animation creates a realistic flowing curtain effect
+
+### Step 19: Add Lens Flare for Bright Stars/Sun
+
+✅ **Completed**
+
+- Created `src/game/LensFlare.ts` to implement lens flare effects:
+  - Used a camera-facing plane with custom shader material
+  - Implemented configurable lens flare properties (size, color, intensity)
+  - Added time-based animation for subtle pulsing effect
+  - Created a system that positions flare based on camera view
+  - Made flare intensity change based on viewing angle
+  - Added visibility check to hide flare when light source is behind camera
+  - Implemented screen-space to world-space positioning calculation
+- Updated `src/game/sceneManager.ts` to integrate lens flare:
+  - Added createLensFlare method with camera reference
+  - Added update loop integration for lens flare positioning
+  - Implemented proper disposal in the cleanup method
+- Updated `src/game/GameCanvas.vue` to:
+  - Initialize lens flare effect for the brightest planet
+  - Configure warm yellow color for sun-like flare
+  - Set proper intensity and size for the effect
+- Tested the implementation to ensure:
+  - Flare appears and changes appropriately as camera moves
+  - The effect is only visible when looking toward the light source
+  - Intensity changes based on viewing angle create a realistic lens effect
+
+### Step 20: Final Integration and Testing
+
+✅ **Completed**
+
+- Enhanced `src/game/sceneManager.ts` with performance and visual balance features:
+  - Added FPS monitoring system with automatic performance mode switching
+  - Implemented `setEffectsIntensity` method to control the intensity of all visual effects
+  - Created `setPerformanceMode` method to reduce visual effects when performance is low
+  - Added `toggleEffect` method to enable/disable individual visual elements
+  - Integrated automatic performance monitoring in the render loop
+- Enhanced `src/game/StarField.ts` with quality control features:
+  - Added `setIntensity` method to adjust star brightness
+  - Implemented `setQuality` method to reduce star count in low-performance mode
+  - Added proper memory management for original star properties
+- Enhanced `src/game/ShootingStars.ts` with control features:
+  - Added `setSpawnIntervals` method to adjust shooting star frequency
+  - Implemented `setEnabled` method to toggle automatic shooting star generation
+  - Optimized update method to respect enabled state
+- Created `src/components/EffectsPanel.vue` for user control of visual effects:
+  - Implemented a toggle button with FPS counter for monitoring performance
+  - Added intensity slider to adjust overall visual intensity
+  - Implemented performance/quality mode toggle buttons
+  - Added individual toggles for each visual effect type
+  - Created clean, space-themed UI design with semi-transparent backdrop
+- Integrated controls into `src/game/GameCanvas.vue`:
+  - Added EffectsPanel component to the template
+  - Positioned controls for easy access while playing
+- Performed comprehensive testing to ensure:
+  - All visual effects work together harmoniously without conflicts
+  - Performance monitoring correctly identifies and addresses frame rate issues
+  - UI controls properly adjust all visual parameters
+  - Effects can be individually toggled without breaking the scene
+  - Performance mode significantly improves frame rate on lower-end devices
+  - Visual appeal is maintained even with reduced effects
