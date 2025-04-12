@@ -204,7 +204,7 @@ defineExpose({
 
     <!-- Game results panel (shown when landed or crashed) -->
     <div
-      v-if="!isPlaying"
+      v-if="gameState === 'landed' || gameState === 'crashed'"
       class="bg-[rgba(23,23,23,0.8)] backdrop-blur-md border border-white/10 rounded-lg p-4 text-center shadow-lg"
     >
       <div v-if="gameState === 'landed'" class="text-emerald-400">
