@@ -9,6 +9,7 @@ export type GameState =
   | "landed"
   | "crashed";
 export type TextureType = "metal" | "neon";
+export type Environment = "space" | "sea" | "";
 
 export interface LandingMetrics {
   position: {
@@ -29,6 +30,7 @@ export interface GameStateValues {
   isLanded: boolean;
   gameState: GameState;
   textureChoice: TextureType;
+  environment: Environment;
 }
 
 /**
@@ -40,7 +42,9 @@ export const useGameStore = defineStore("game", () => {
   const score = ref<number>(0);
   const isLanded = ref<boolean>(false);
   const gameState = ref<GameState>("waiting");
+  const showGameCanvas = ref<boolean>(false);
   const textureChoice = ref<TextureType>("metal");
+  const environment = ref<Environment>("");
 
   // Getters (computed values)
   const hasFuel = computed(() => fuel.value > 0);
@@ -113,7 +117,26 @@ export const useGameStore = defineStore("game", () => {
   }
 
   /**
-   * Reset the game state to initial values
+   * Set the environment choice
+   * @param env - The environment choice to set
+   */
+  function setEnvironment(env: Environment): void {
+    environment.value = env;
+    // Keep game state as waiting until explicitly started
+    gameState.value = "waiting";
+  }
+
+  /**
+   * Start the game from waiting state
+   */
+  function startGame(): void {
+    // Don't transition to pre-launch, just ensure we're in waiting state
+    gameState.value = "waiting";
+    showGameCanvas.value = true;
+  }
+
+  /**
+   * Reset the game state to initial values but maintain the environment if not reset explicitly
    * @returns The reset state values
    */
   function resetGame(): GameStateValues {
@@ -121,7 +144,7 @@ export const useGameStore = defineStore("game", () => {
     score.value = 0;
     isLanded.value = false;
     gameState.value = "waiting";
-    // Keep texture choice as is when resetting game
+    // Keep environment as is (don't reset to empty)
 
     return {
       fuel: fuel.value,
@@ -129,7 +152,17 @@ export const useGameStore = defineStore("game", () => {
       isLanded: isLanded.value,
       gameState: gameState.value,
       textureChoice: textureChoice.value,
+      environment: environment.value,
     };
+  }
+
+  /**
+   * Reset the game completely and go back to environment selection
+   */
+  function resetToSelection(): void {
+    resetGame();
+    environment.value = "";
+    showGameCanvas.value = false;
   }
 
   return {
@@ -139,7 +172,8 @@ export const useGameStore = defineStore("game", () => {
     isLanded,
     gameState,
     textureChoice,
-
+    environment,
+    showGameCanvas,
     // Getters
     hasFuel,
     canFly,
@@ -149,6 +183,9 @@ export const useGameStore = defineStore("game", () => {
     calculateScore,
     setGameState,
     setTextureChoice,
+    setEnvironment,
+    startGame,
     resetGame,
+    resetToSelection,
   };
 });
