@@ -566,3 +566,19 @@ These enhancements create a more dynamic and visually interesting space environm
   - Effects can be individually toggled without breaking the scene
   - Performance mode significantly improves frame rate on lower-end devices
   - Visual appeal is maintained even with reduced effects
+
+## April 15, 2024
+
+### Environment Selection Implementation - Updated
+
+✅ **Completed**
+
+- Made improvements to the environment selection flow:
+  - Changed the game to show a "Back to Selection" button after landing or crashing instead of automatically returning to the selection screen
+  - Modified the flow so that after selecting an environment and clicking "Start Game", the "Press Space to Start" message appears
+  - The game only transitions to the pre-launch state after pressing the space key
+  - Updated the gameStore to support an empty environment value, which is used to show the selection screen
+  - Modified the App.vue component to show GameCanvas as soon as an environment is selected, regardless of game state
+  - Added styling for the "Back to Selection" button with hover and active state animations
+
+These changes improve the user experience by giving the player more control over when to return to the environment selection screen and by maintaining the consistent "Press Space to Start" flow after selecting an environment.
