@@ -15,6 +15,8 @@ export class StarField {
   private sizes: Float32Array; // Variable sizes for depth effect
   private time: number = 0;
   private twinkleTime: number = 0;
+  private twinkleFrequency: number = 0.9; // Higher value = more stars twinkle
+  private glowIntensity: number = 1.5; // Higher value = stronger glow effect
   private texture: THREE.Texture | null = null;
 
   private readonly starCount: number;
@@ -270,8 +272,8 @@ export class StarField {
     this.time += deltaTime;
     this.twinkleTime += deltaTime;
 
-    // Update at most 15 times per second for twinkling to improve performance
-    const shouldUpdateTwinkle = this.twinkleTime > 0.067; // ~15fps
+    // Update at most 20 times per second for twinkling to improve performance
+    const shouldUpdateTwinkle = this.twinkleTime > 0.1; // ~20fps
     if (shouldUpdateTwinkle) {
       this.twinkleTime = 0;
     }
@@ -286,7 +288,7 @@ export class StarField {
       const idx = i * 3;
 
       // Add time-based oscillation for more dynamic movement
-      const oscillation = Math.sin(this.time * 0.2 + i * 0.01) * 0.05;
+      const oscillation = Math.sin(this.time * 0.3 + i * 0.02) * 0.08;
 
       // Apply velocity to position with oscillation
       positions[idx] +=
@@ -323,20 +325,31 @@ export class StarField {
 
       // Update twinkling effect (less frequently to improve performance)
       if (shouldUpdateTwinkle) {
-        // Only make some stars twinkle (based on star index)
-        if (i % 4 === Math.floor(this.time * 3) % 4) {
-          // Calculate a new opacity value that oscillates
+        // Make more stars twinkle by using modulo with twinkleFrequency
+        if (
+          i % Math.max(2, Math.floor(4 / this.twinkleFrequency)) ===
+          Math.floor(this.time * 5) %
+            Math.max(2, Math.floor(4 / this.twinkleFrequency))
+        ) {
+          // Calculate a new opacity value that oscillates with higher amplitude
           const opacityFactor =
-            0.5 + Math.abs(Math.sin(this.time * 2 + i * 0.1)) * 0.5;
+            0.5 +
+            Math.abs(Math.sin(this.time * 3 + i * 0.15)) *
+              0.5 *
+              this.glowIntensity;
           this.opacities[i] = opacityFactor;
 
-          // Apply opacity to color
-          colors[idx] = this.originalColors[idx] * opacityFactor;
-          colors[idx + 1] = this.originalColors[idx + 1] * opacityFactor;
-          colors[idx + 2] = this.originalColors[idx + 2] * opacityFactor;
+          // Apply opacity to color with enhanced brightness
+          colors[idx] =
+            this.originalColors[idx] * opacityFactor * this.glowIntensity;
+          colors[idx + 1] =
+            this.originalColors[idx + 1] * opacityFactor * this.glowIntensity;
+          colors[idx + 2] =
+            this.originalColors[idx + 2] * opacityFactor * this.glowIntensity;
 
-          // Also slightly vary the size for a more dynamic effect
-          sizes[i] = this.sizes[i] * (0.8 + Math.sin(this.time + i) * 0.2);
+          // Vary the size more dramatically for a more dynamic effect
+          sizes[i] =
+            this.sizes[i] * (0.7 + Math.sin(this.time * 1.5 + i) * 0.3);
         }
       }
     }

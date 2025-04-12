@@ -28,8 +28,8 @@ export class ShootingStars {
   constructor({
     maxShootingStars = 5,
     maxTrailLength = 20,
-    minSpawnInterval = 5, // Minimum seconds between shooting stars
-    maxSpawnInterval = 15, // Maximum seconds between shooting stars
+    minSpawnInterval = 3, // Minimum seconds between shooting stars
+    maxSpawnInterval = 10, // Maximum seconds between shooting stars
     texture = null,
   }: {
     maxShootingStars?: number;
@@ -148,8 +148,8 @@ export class ShootingStars {
       targetZ - startPos.z
     ).normalize();
 
-    // Random speed between 10 and 40 units per second
-    const speed = 10 + Math.random() * 30;
+    // Random speed between 20 and 50 units per second
+    const speed = 20 + Math.random() * 30;
 
     return direction.multiplyScalar(speed);
   }

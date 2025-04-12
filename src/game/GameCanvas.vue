@@ -24,6 +24,11 @@ import LoadingScreen from "../components/LoadingScreen.vue";
 import EffectsPanel from "../components/EffectsPanel.vue";
 import { Terrain } from "./Terrain";
 
+// Define emits
+const emit = defineEmits<{
+  (e: "game-end"): void;
+}>();
+
 // Create refs for the scene elements
 const canvasContainer = ref<HTMLDivElement | null>(null);
 const isLoading = ref(true);
@@ -146,11 +151,11 @@ const initializeGameScene = (
 
     // Create a dynamic star field
     sceneManager.createStarField({
-      starCount: 2000,
+      starCount: 3500,
       radius: 95,
-      minSize: 0.1,
-      maxSize: 0.5,
-      movementSpeed: 0.1,
+      minSize: 0.15,
+      maxSize: 0.7,
+      movementSpeed: 0.2,
       movementPattern: "radial",
       texture: starTexture,
     });
@@ -160,10 +165,10 @@ const initializeGameScene = (
 
     // Create shooting stars system
     sceneManager.createShootingStars({
-      maxShootingStars: 5,
-      maxTrailLength: 20,
-      minSpawnInterval: 8,
-      maxSpawnInterval: 20,
+      maxShootingStars: 8,
+      maxTrailLength: 25,
+      minSpawnInterval: 4,
+      maxSpawnInterval: 12,
       texture: starTexture,
     });
 
@@ -326,16 +331,18 @@ const initializeGameScene = (
         rocketBody.velocity.set(0, 0, 0);
         rocketBody.angularVelocity.set(0, 0, 0);
 
-        // Ensure the body is not static and can be affected by physics
-        rocketBody.type = CANNON.Body.DYNAMIC;
-        rocketBody.mass = 1;
-        rocketBody.updateMassProperties();
-
         // Stop any playing thruster sound when resetting
-        isThrusterSoundPlaying = false;
+        if (isThrusterSoundPlaying) {
+          assetLoader.stopAudio("rocket-thrust");
+          isThrusterSoundPlaying = false;
+        }
 
-        // Reset game state
+        // Reset game state but maintain environment
         gameStore.resetGame();
+
+        // Now make rocket static again until space is pressed
+        rocketBody.type = CANNON.Body.STATIC;
+
         return;
       }
 
@@ -477,9 +484,9 @@ const initializeGameScene = (
 
     // Create shooting stars effect
     sceneManager.createShootingStars({
-      maxShootingStars: 3,
-      minSpawnInterval: 10,
-      maxSpawnInterval: 30,
+      maxShootingStars: 5,
+      minSpawnInterval: 3,
+      maxSpawnInterval: 15,
       texture: assetLoader.getTexture("star"),
     });
 
@@ -517,12 +524,12 @@ const initializeGameScene = (
     });
 
     // Trigger some effects for demonstration
-    // Shooting star every 10 seconds
+    // Shooting star every 5 seconds instead of 10
     shootingStarInterval = window.setInterval(() => {
       if (sceneManager) {
         sceneManager.triggerShootingStar();
       }
-    }, 10000);
+    }, 5000);
 
     // Aurora effect that pulses every 30 seconds
     auroraInterval = window.setInterval(() => {
@@ -603,6 +610,18 @@ onUnmounted(() => {
       Press Space to Start
     </div>
 
+    <!-- Back to Selection Button -->
+    <div
+      v-if="
+        !isLoading &&
+        (gameStore.gameState === 'landed' || gameStore.gameState === 'crashed')
+      "
+      class="back-button"
+      @click="emit('game-end')"
+    >
+      Back to Selection
+    </div>
+
     <!-- HUD -->
     <HUD
       v-if="!isLoading && sceneManager"
@@ -654,5 +673,29 @@ onUnmounted(() => {
     opacity: 0.6;
     transform: translate(-50%, -50%) scale(0.98);
   }
+}
+
+.back-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: "Arial", sans-serif;
+  z-index: 20;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.back-button:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+  transform: scale(1.05);
+}
+
+.back-button:active {
+  transform: scale(0.98);
 }
 </style>
