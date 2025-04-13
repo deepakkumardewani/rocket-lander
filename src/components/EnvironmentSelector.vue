@@ -5,7 +5,7 @@ import { useGameStore, type Environment } from "../stores/gameStore";
 const gameStore = useGameStore();
 
 // Default to space environment
-const selectedEnvironment = ref<Environment>("space");
+const selectedEnvironment = ref<Environment>("sea");
 
 // Start button is enabled when an environment is selected
 const isStartButtonDisabled = computed(() => !selectedEnvironment.value);

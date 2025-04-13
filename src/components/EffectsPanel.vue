@@ -11,13 +11,18 @@ type EffectType =
   | "aurora"
   | "lensFlare"
   | "shootingStars"
-  | "starField";
+  | "starField"
+  | "clouds"
+  | "birds";
+
 const effectTypes: EffectType[] = [
   "nebula",
   "aurora",
   "lensFlare",
   "shootingStars",
   "starField",
+  "clouds",
+  "birds",
 ];
 
 const intensityValue = ref(100);
@@ -30,6 +35,8 @@ const effectsState = ref({
   lensFlare: true,
   shootingStars: true,
   starField: true,
+  clouds: true,
+  birds: true,
 });
 
 // Toggle panel visibility

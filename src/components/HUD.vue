@@ -13,7 +13,19 @@ const props = defineProps<{
 
 // Get the game store to access fuel, score, and game state
 const gameStore = useGameStore();
-const { score, gameState, textureChoice, fuel } = storeToRefs(gameStore);
+const { score, gameState, textureChoice, fuel, environment } =
+  storeToRefs(gameStore);
+
+// Compute platform name based on environment
+const platformName = computed(() => {
+  return environment.value === "sea" ? "Boat" : "Platform";
+});
+
+// Environment display name with capitalization
+// const environmentDisplay = computed(() => {
+//   if (!environment.value) return "";
+//   return environment.value.charAt(0).toUpperCase() + environment.value.slice(1);
+// });
 
 // Texture options for UI display
 const textureOptions = [
@@ -103,21 +115,31 @@ defineExpose({
     <div
       class="flex justify-between items-center bg-[rgba(23,23,23,0.75)] backdrop-blur-md border border-white/10 rounded-lg p-1.5 px-3 shadow-lg"
     >
-      <div
-        class="px-2.5 py-1 rounded font-semibold tracking-wider text-sm uppercase text-white"
-        :class="{
-          'bg-yellow-500': gameState === 'pre-launch',
-          'bg-blue-500': gameState === 'flying',
-          'bg-green-500': gameState === 'landed',
-          'bg-red-500': gameState === 'crashed',
-        }"
-      >
-        {{ gameStateLabel }}
+      <div class="flex items-center gap-2">
+        <div
+          class="px-2.5 py-1 rounded font-semibold tracking-wider text-sm uppercase text-white"
+          :class="{
+            'bg-yellow-500': gameState === 'pre-launch',
+            'bg-blue-500': gameState === 'flying',
+            'bg-green-500': gameState === 'landed',
+            'bg-red-500': gameState === 'crashed',
+          }"
+        >
+          {{ gameStateLabel }}
+        </div>
+        <!-- <div
+          v-if="environment"
+          class="px-2.5 py-1 rounded font-semibold tracking-wider text-sm uppercase text-white bg-indigo-500"
+        >
+          {{ environmentDisplay }}
+        </div> -->
       </div>
 
       <!-- Texture selection dropdown -->
       <div class="flex items-center gap-2">
-        <label for="texture-choice" class="text-xs opacity-90">Platform:</label>
+        <label for="texture-choice" class="text-xs opacity-90"
+          >{{ platformName }}:</label
+        >
         <select
           id="texture-choice"
           v-model="textureChoice"
@@ -224,6 +246,10 @@ defineExpose({
         <div class="text-3xl mb-2 text-shadow-lg">💥</div>
         <div class="font-bold text-xl mb-3 tracking-wider">MISSION FAILED</div>
         <div class="text-sm text-white/80 font-medium">
+          Your rocket crashed! Land safely on the {{ platformName }} to complete
+          the mission.
+        </div>
+        <div class="text-sm text-white/80 font-medium mt-2">
           Press 'R' to try again
         </div>
       </div>

@@ -41,6 +41,8 @@ export class AssetLoader {
   private audioContext: AudioContext | null;
   private loadedTextures: Map<string, THREE.Texture>;
   private loadedSkyboxTextures: THREE.Texture[];
+  private loadedSeaSkyboxTextures: THREE.Texture[];
+  private seaNormalTexture: THREE.Texture | null = null;
   private activeSources: Map<string, AudioBufferSourceNode>;
 
   constructor() {
@@ -62,6 +64,7 @@ export class AssetLoader {
 
     this.loadedTextures = new Map();
     this.loadedSkyboxTextures = [];
+    this.loadedSeaSkyboxTextures = [];
   }
 
   // Set up the loading manager with progress and error handlers
@@ -363,20 +366,117 @@ export class AssetLoader {
     this.loadedTextures.clear();
     this.loadedSkyboxTextures.forEach((texture) => texture.dispose());
     this.loadedSkyboxTextures = [];
+    this.loadedSeaSkyboxTextures.forEach((texture) => texture.dispose());
+    this.loadedSeaSkyboxTextures = [];
+
+    // Dispose of the sea normal texture
+    if (this.seaNormalTexture) {
+      this.seaNormalTexture.dispose();
+      this.seaNormalTexture = null;
+    }
   }
 
-  async loadSkyboxTextures(): Promise<THREE.Texture[]> {
-    const sides = ["right", "left", "top", "bottom", "front", "back"];
-    const promises = sides.map((side) =>
-      this.textureLoader.loadAsync(`/src/assets/skybox/${side}.png`)
-    );
-
+  /**
+   * Load skybox textures and create a CubeTexture
+   * @returns Promise that resolves with an array of 6 textures for skybox
+   */
+  public async loadSkyboxTextures(): Promise<THREE.Texture[]> {
     try {
+      // If textures already loaded, return them
+      if (this.loadedSkyboxTextures.length === 6) {
+        return this.loadedSkyboxTextures;
+      }
+
+      const paths = [
+        "/src/assets/skybox/space/right.png", // positive x
+        "/src/assets/skybox/space/left.png", // negative x
+        "/src/assets/skybox/space/top.png", // positive y
+        "/src/assets/skybox/space/bottom.png", // negative y
+        "/src/assets/skybox/space/front.png", // positive z
+        "/src/assets/skybox/space/back.png", // negative z
+      ];
+
+      // Load each texture separately
+      const promises = paths.map((path) => {
+        return new Promise<THREE.Texture>((resolve, reject) => {
+          this.textureLoader.load(
+            path,
+            (texture) => {
+              resolve(texture);
+            },
+            undefined,
+            (error) => {
+              reject(
+                new Error(`Failed to load skybox texture: ${path} - ${error}`)
+              );
+            }
+          );
+        });
+      });
+
+      // Wait for all textures to load
       this.loadedSkyboxTextures = await Promise.all(promises);
       return this.loadedSkyboxTextures;
     } catch (error) {
-      console.error("Failed to load skybox textures:", error);
-      throw error;
+      handleAssetError(
+        "Failed to load skybox textures",
+        error instanceof Error ? error : new Error(String(error))
+      );
+      // Return an array of placeholder textures (black) in case of error
+      return Array(6)
+        .fill(null)
+        .map(() => new THREE.Texture());
+    }
+  }
+
+  /**
+   * Load sea skybox textures with solid light blue color
+   * @returns Promise that resolves with an array of 6 textures for sea skybox
+   */
+  public async loadSeaSkyboxTextures(): Promise<THREE.Texture[]> {
+    try {
+      // If textures already loaded, return them
+      if (this.loadedSeaSkyboxTextures.length === 6) {
+        return this.loadedSeaSkyboxTextures;
+      }
+
+      // Create six solid blue textures for the skybox
+      const skyBlueColor = 0x87ceeb; // Light blue color
+
+      // Create a small canvas for the texture
+      const size = 64; // Small size is sufficient for solid color
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        throw new Error("Could not get canvas context");
+      }
+
+      // Fill canvas with sky blue color
+      context.fillStyle = `#${skyBlueColor.toString(16).padStart(6, "0")}`;
+      context.fillRect(0, 0, size, size);
+
+      // Create textures from the canvas
+      const textures: THREE.Texture[] = [];
+      for (let i = 0; i < 6; i++) {
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.needsUpdate = true;
+        textures.push(texture);
+      }
+
+      this.loadedSeaSkyboxTextures = textures;
+      return this.loadedSeaSkyboxTextures;
+    } catch (error) {
+      handleAssetError(
+        "Failed to create sea skybox textures",
+        error instanceof Error ? error : new Error(String(error))
+      );
+      // Return an array of placeholder textures (black) in case of error
+      return Array(6)
+        .fill(null)
+        .map(() => new THREE.Texture());
     }
   }
 
@@ -408,10 +508,10 @@ export class AssetLoader {
   async loadPlatformTextures(): Promise<PlatformTextures> {
     try {
       const metalTexture = await this.textureLoader.loadAsync(
-        "/src/assets/platform/metallic.png"
+        "/src/assets/textures/platform/metallic.png"
       );
       const neonTexture = await this.textureLoader.loadAsync(
-        "/src/assets/platform/neon.png"
+        "/src/assets/textures/platform/neon.png"
       );
 
       // Store textures in the map
@@ -430,7 +530,312 @@ export class AssetLoader {
       throw error;
     }
   }
+
+  // Load boat texture for the sea environment
+  async loadBoatTexture(): Promise<THREE.Texture> {
+    try {
+      const boatTexture = await this.textureLoader.loadAsync(
+        "/src/assets/textures/boat/boat_1.jpg"
+      );
+
+      // Configure texture for optimal appearance
+      boatTexture.wrapS = THREE.RepeatWrapping;
+      boatTexture.wrapT = THREE.RepeatWrapping;
+      boatTexture.repeat.set(1, 1);
+
+      // Store texture in the map
+      this.textures.set("boat_1", boatTexture);
+
+      console.log("Boat texture loaded successfully");
+      return boatTexture;
+    } catch (error) {
+      console.error("Failed to load boat texture:", error);
+      // Return a new texture with a brown color as fallback
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.fillStyle = "#8b4513"; // Wooden brown color
+        context.fillRect(0, 0, 128, 128);
+      }
+      const fallbackTexture = new THREE.CanvasTexture(canvas);
+      this.textures.set("boat_1", fallbackTexture);
+      return fallbackTexture;
+    }
+  }
+
+  /**
+   * Load or generate a normal map texture for the sea surface
+   * @returns The sea normal map texture
+   */
+  async loadSeaNormalTexture(): Promise<THREE.Texture | null> {
+    // If already loaded, return the cached texture
+    if (this.seaNormalTexture) {
+      return this.seaNormalTexture;
+    }
+
+    try {
+      // Try to load the texture from file
+      const texturePath = "/src/assets/textures/waternormals.jpg";
+
+      // Create a promise to handle the loading
+      return new Promise((resolve) => {
+        this.textureLoader.load(
+          texturePath,
+          (texture) => {
+            // Configure the texture
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+
+            // Cache and resolve
+            this.seaNormalTexture = texture;
+            resolve(texture);
+          },
+          undefined,
+          (error) => {
+            console.warn(
+              `Failed to load sea normal map from ${texturePath}, generating placeholder.`,
+              error
+            );
+
+            // Generate a placeholder normal map
+            const placeholderTexture = this.generateSeaNormalTexture();
+            this.seaNormalTexture = placeholderTexture;
+            resolve(placeholderTexture);
+          }
+        );
+      });
+    } catch (error) {
+      console.warn(
+        "Error loading sea normal map, generating placeholder.",
+        error
+      );
+
+      // Generate a placeholder normal map
+      const placeholderTexture = this.generateSeaNormalTexture();
+      this.seaNormalTexture = placeholderTexture;
+      return placeholderTexture;
+    }
+  }
+
+  /**
+   * Generate a placeholder normal map texture for the sea surface
+   * @returns A procedurally generated normal map texture
+   */
+  private generateSeaNormalTexture(): THREE.Texture {
+    // Create canvas with higher resolution for more detail
+    const canvas = document.createElement("canvas");
+    canvas.width = 512; // Increased from 256 for higher detail
+    canvas.height = 512; // Increased from 256 for higher detail
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("Could not get canvas context for normal map generation");
+    }
+
+    // Fill with base normal pointing upward (128,128,255)
+    ctx.fillStyle = "rgb(128, 128, 255)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Create multiple wave patterns for more realistic water normal map
+    const createWavePattern = (
+      frequency: number,
+      amplitude: number,
+      direction: number,
+      phase: number
+    ) => {
+      const cos = Math.cos(direction);
+      const sin = Math.sin(direction);
+
+      // More efficiency with a smaller step size for high-res canvas
+      const step = 2;
+
+      for (let y = 0; y < canvas.height; y += step) {
+        for (let x = 0; x < canvas.width; x += step) {
+          // Transform coordinates based on wave direction
+          const xDir = (x * cos - y * sin) * frequency;
+          const yDir = (x * sin + y * cos) * frequency;
+
+          // Create wave pattern - combination of sine waves
+          const wave =
+            Math.sin(xDir + phase) * Math.sin(yDir + phase * 0.7) * amplitude;
+
+          // Get existing pixel data
+          const imgData = ctx.getImageData(x, y, step, step);
+
+          // Normal map encoding: RGB = XYZ
+          // Modify the normals based on wave pattern
+          for (let i = 0; i < step * step * 4; i += 4) {
+            // Add wave effect to existing normal
+            imgData.data[i] = Math.max(
+              0,
+              Math.min(255, imgData.data[i] + wave * cos * 15)
+            );
+            imgData.data[i + 1] = Math.max(
+              0,
+              Math.min(255, imgData.data[i + 1] + wave * sin * 15)
+            );
+
+            // Z component (blue) - adjust based on slope for realistic normals
+            // (higher areas have more upward-facing normals)
+            const slopeX = cos * Math.cos(xDir + phase) * amplitude * 0.2;
+            const slopeY = sin * Math.cos(yDir + phase * 0.7) * amplitude * 0.2;
+            const slopeLen = Math.sqrt(slopeX * slopeX + slopeY * slopeY);
+
+            imgData.data[i + 2] = Math.max(
+              0,
+              Math.min(255, 255 - slopeLen * 40)
+            );
+          }
+
+          ctx.putImageData(imgData, x, y);
+        }
+      }
+    };
+
+    // Add multiple wave patterns with different parameters
+    // Primary wave pattern
+    createWavePattern(0.03, 1.0, 0, 0);
+    // Secondary crossed wave patterns
+    createWavePattern(0.05, 0.7, Math.PI / 4, 1.5);
+    createWavePattern(0.04, 0.5, Math.PI / 6, 2.7);
+    // Small ripple details
+    createWavePattern(0.12, 0.3, Math.PI / 3, 0.8);
+    createWavePattern(0.08, 0.4, -Math.PI / 5, 3.2);
+
+    // Add some random noise for fine detail
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < imgData.data.length; i += 4) {
+      // Add slight randomness to each color channel
+      imgData.data[i] += (Math.random() - 0.5) * 10;
+      imgData.data[i + 1] += (Math.random() - 0.5) * 10;
+      imgData.data[i + 2] += (Math.random() - 0.5) * 5; // Less noise in blue channel for stability
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Create and configure texture
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(4, 4); // Repeat the texture multiple times for smaller wave patterns
+
+    return texture;
+  }
+
+  /**
+   * Load or generate a cloud texture
+   * Uses an existing cloud.png or generates a procedural one
+   * @returns Promise for the loaded cloud texture
+   */
+  async loadCloudTexture(): Promise<THREE.Texture> {
+    try {
+      if (this.loadedTextures.has("cloud")) {
+        return this.loadedTextures.get("cloud")!;
+      }
+
+      return new Promise((resolve, reject) => {
+        this.textureLoader.load(
+          "/src/assets/textures/cloud.avif",
+          (texture) => {
+            this.loadedTextures.set("cloud", texture);
+            resolve(texture);
+          },
+          undefined,
+          (error) => {
+            console.error("Error loading cloud texture:", error);
+            reject(error);
+          }
+        );
+      });
+    } catch (error) {
+      console.error("Failed to load cloud texture", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generates a procedural cloud texture
+   * @returns Procedural cloud texture
+   */
+  private generateProceduralCloudTexture(): THREE.Texture {
+    const size = 256;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+
+    // Fill with transparent background
+    ctx.fillStyle = "rgba(0,0,0,0)";
+    ctx.fillRect(0, 0, size, size);
+
+    // Helper function for Perlin-like noise (simplified)
+    const noise = (x: number, y: number) => {
+      return Math.sin(x * 0.1) * Math.sin(y * 0.1) * 0.5 + 0.5;
+    };
+
+    // Draw multiple noise layers for fluffy look
+    for (let i = 0; i < 5; i++) {
+      const offsetX = Math.random() * size * 0.2;
+      const offsetY = Math.random() * size * 0.2;
+      const scale = 0.5 + Math.random() * 0.5;
+
+      // Draw noise blob
+      for (let x = 0; x < size; x++) {
+        for (let y = 0; y < size; y++) {
+          // Calculate distance from center for circular gradient
+          const dx = x - size / 2;
+          const dy = y - size / 2;
+          const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
+
+          // Create noise value
+          const noiseVal = noise((x + offsetX) * scale, (y + offsetY) * scale);
+
+          // Create radial gradient that fades at the edges
+          const edgeFade = Math.max(0, 1 - distFromCenter);
+          const alpha = noiseVal * edgeFade * edgeFade * 0.2; // Lower alpha for layering
+
+          // Use slightly varied white for depth
+          const colorVal = 220 + noiseVal * 35;
+
+          ctx.fillStyle = `rgba(${colorVal},${colorVal},${colorVal},${alpha})`;
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+
+    // Add central density
+    for (let x = 0; x < size; x++) {
+      for (let y = 0; y < size; y++) {
+        const dx = x - size / 2;
+        const dy = y - size / 2;
+        const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
+
+        if (distFromCenter < 0.5) {
+          const alpha = (1 - distFromCenter * 2) * 0.3;
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+
+    // Create texture from canvas
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    return texture;
+  }
 }
 
 // Create and export a singleton instance for use throughout the app
 export const assetLoader = new AssetLoader();
+
+// Extend Window interface to include gameAssetLoader
+declare global {
+  interface Window {
+    gameAssetLoader: AssetLoader;
+  }
+}
+
+// Assign the instance to window for global access
+window.gameAssetLoader = assetLoader;

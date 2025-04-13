@@ -1,11 +1,16 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { Sky } from "three/addons/objects/Sky.js";
 import { StarField } from "./StarField";
 import { CelestialObjects } from "./CelestialObjects";
 import { ShootingStars } from "./ShootingStars";
 import { Nebula } from "./Nebula";
 import { Aurora } from "./Aurora";
 import { LensFlare } from "./LensFlare";
+import { Cloud } from "./Clouds";
+import { assetLoader } from "../utils/assetLoader";
+import { Birds } from "./Birds";
+import { CloudV2 } from "./CloudV2";
 
 /**
  * Creates and configures the Three.js scene
@@ -119,12 +124,17 @@ export class SceneManager {
   public renderer: THREE.WebGLRenderer;
   public controls: OrbitControls;
   private skybox: THREE.Mesh | null;
+  private sky: Sky | null = null;
+  private sunPosition: THREE.Vector3 = new THREE.Vector3(100, 100, 50);
+  private directionalLight: THREE.DirectionalLight | null = null;
   private starField: StarField | null = null;
   private celestialObjects: CelestialObjects | null = null;
   private shootingStars: ShootingStars | null = null;
   private nebula: Nebula | null = null;
   private aurora: Aurora | null = null;
   private lensFlare: LensFlare | null = null;
+  private clouds: Cloud[] | null = null;
+  private birds: Birds | null = null;
   private hudRef: any | null = null; // Reference to HUD component
   private lastUpdateTime: number = 0;
   private fpsCounter: { count: number; lastTime: number; value: number } = {
@@ -134,6 +144,8 @@ export class SceneManager {
   };
   private isPerformanceMode: boolean = false;
   private effectsIntensity: number = 1.0;
+  private cubeCamera: THREE.CubeCamera | null = null;
+  private cubeRenderTarget: THREE.WebGLCubeRenderTarget | null = null;
 
   constructor(container: HTMLElement) {
     this.scene = new THREE.Scene();
@@ -176,35 +188,53 @@ export class SceneManager {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    // Set pixel ratio based on device for better performance
+    // For mobile devices, use a lower pixel ratio
+    if (
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      )
+    ) {
+      this.renderer.setPixelRatio(1.0);
+    } else {
+      this.renderer.setPixelRatio(window.devicePixelRatio);
+    }
+
     this.camera.position.set(0, 20, 30);
     this.camera.lookAt(0, 0, 0);
 
     // Add ambient light with more intensity for better overall illumination
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
     this.scene.add(ambientLight);
 
     // Add directional light with enhanced shadow settings
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(10, 20, 10);
-    directionalLight.lookAt(0, 0, 0);
-    directionalLight.castShadow = true;
+    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    this.directionalLight.position.copy(this.sunPosition);
+    this.directionalLight.lookAt(0, 0, 0);
+    this.directionalLight.castShadow = true;
 
-    // Configure shadow properties for better quality
-    directionalLight.shadow.mapSize.width = 1024;
-    directionalLight.shadow.mapSize.height = 1024;
-    directionalLight.shadow.camera.near = 0.1;
-    directionalLight.shadow.camera.far = 50;
-    directionalLight.shadow.camera.left = -20;
-    directionalLight.shadow.camera.right = 20;
-    directionalLight.shadow.camera.top = 20;
-    directionalLight.shadow.camera.bottom = -20;
-    directionalLight.shadow.bias = -0.0005;
+    // Configure shadow properties for better quality and extended range for clouds
+    this.directionalLight.shadow.mapSize.width = 2048;
+    this.directionalLight.shadow.mapSize.height = 2048;
+    this.directionalLight.shadow.camera.near = 0.1;
+    this.directionalLight.shadow.camera.far = 60;
+    this.directionalLight.shadow.camera.left = -25;
+    this.directionalLight.shadow.camera.right = 25;
+    this.directionalLight.shadow.camera.top = 25;
+    this.directionalLight.shadow.camera.bottom = -25;
+    this.directionalLight.shadow.bias = -0.0005;
 
-    this.scene.add(directionalLight);
+    // Add a second directional light from different angle to fill shadows
+    const fillLight = new THREE.DirectionalLight(0xffffcc, 0.5);
+    fillLight.position.set(-15, 10, -10);
+    fillLight.lookAt(0, 0, 0);
+    this.scene.add(fillLight);
 
-    // Add a helper to visualize light direction and shadow camera (for development)
-    // const helper = new THREE.CameraHelper(directionalLight.shadow.camera);
-    // this.scene.add(helper);
+    // Add a subtle blue-tinted hemisphere light for sea environment ambience
+    const hemisphereLight = new THREE.HemisphereLight(0xaaccff, 0x102030, 0.4);
+    this.scene.add(hemisphereLight);
+
+    this.scene.add(this.directionalLight);
   }
 
   createSkybox(textures: THREE.Texture[]): void {
@@ -220,6 +250,56 @@ export class SceneManager {
     }
 
     const size = 500;
+    const skyboxGeometry = new THREE.BoxGeometry(size, size, size);
+    const skyboxMaterials = textures.map((texture) => {
+      return new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.BackSide,
+      });
+    });
+
+    // Create the skybox mesh
+    this.skybox = new THREE.Mesh(skyboxGeometry, skyboxMaterials);
+    this.scene.add(this.skybox);
+  }
+
+  /**
+   * Creates a skybox based on the environment
+   * @param spaceTextures Textures for space skybox
+   * @param seaTextures Textures for sea skybox
+   * @param environment Current environment ('space' or 'sea')
+   */
+  createEnvironmentSkybox(
+    spaceTextures: THREE.Texture[],
+    seaTextures: THREE.Texture[],
+    environment: string
+  ): void {
+    if (environment === "space") {
+      this.createSkybox(spaceTextures);
+    } else if (environment === "sea") {
+      this.createSeaSkybox(seaTextures);
+    } else {
+      console.error(`Unknown environment: ${environment}`);
+    }
+  }
+
+  /**
+   * Creates a sea skybox with blue sky textures
+   * @param textures Array of 6 textures for the sea skybox
+   */
+  createSeaSkybox(textures: THREE.Texture[]): void {
+    if (this.skybox) {
+      this.scene.remove(this.skybox);
+      this.skybox.geometry.dispose();
+      (this.skybox.material as THREE.Material).dispose();
+    }
+
+    if (textures.length !== 6) {
+      console.error("Sea skybox requires exactly 6 textures");
+      return;
+    }
+
+    const size = 500; // Same size as space skybox for consistency
     const skyboxGeometry = new THREE.BoxGeometry(size, size, size);
     const skyboxMaterials = textures.map((texture) => {
       return new THREE.MeshBasicMaterial({
@@ -479,7 +559,14 @@ export class SceneManager {
    * @param enabled Whether the effect should be enabled
    */
   public toggleEffect(
-    effect: "nebula" | "aurora" | "lensFlare" | "shootingStars" | "starField",
+    effect:
+      | "nebula"
+      | "aurora"
+      | "lensFlare"
+      | "shootingStars"
+      | "starField"
+      | "clouds"
+      | "birds",
     enabled: boolean
   ): void {
     switch (effect) {
@@ -512,6 +599,16 @@ export class SceneManager {
           this.starField.getMesh().visible = enabled;
         }
         break;
+      case "clouds":
+        if (this.clouds) {
+          this.clouds.forEach((cloud) => cloud.setVisible(enabled));
+        }
+        break;
+      case "birds":
+        if (this.birds) {
+          this.birds.getGroup().visible = enabled;
+        }
+        break;
     }
   }
 
@@ -534,7 +631,263 @@ export class SceneManager {
     };
   }
 
-  public render(): void {
+  /**
+   * Creates a cloud system for the sea environment
+   * @param options Cloud system configuration options
+   */
+  public createClouds(options?: { count?: number; boundary?: number }): void {
+    // Dispose previous clouds if they exist
+    if (this.clouds) {
+      this.clouds.forEach((cloud) => cloud.dispose());
+      this.clouds = null;
+    }
+
+    // Skip creating clouds if in performance mode with low effects intensity
+    if (this.isPerformanceMode && this.effectsIntensity < 0.5) {
+      return;
+    }
+
+    // Create new clouds with the camera reference
+    this.clouds = Cloud.createClouds(
+      this.scene,
+      options?.boundary || 4000,
+      options?.count || 50
+    );
+
+    console.log("Created cloud system");
+  }
+
+  /**
+   * Creates a cube camera for real-time environment reflections on the sea surface
+   * @param position Position for the cube camera
+   * @param resolution Resolution of the cube render target
+   * @returns The created cube render target or null if creation failed
+   */
+  public createCubeCamera(
+    position: THREE.Vector3 = new THREE.Vector3(0, 5, 0),
+    resolution: number = 256
+  ): THREE.WebGLCubeRenderTarget | null {
+    try {
+      // Clean up any existing cube camera first
+      this.disposeCubeCamera();
+
+      // Create a cube render target with mipmaps to reduce aliasing
+      this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(resolution, {
+        format: THREE.RGBAFormat,
+        generateMipmaps: true,
+        minFilter: THREE.LinearMipmapLinearFilter,
+      });
+
+      // Create a cube camera with appropriate near and far clipping planes
+      this.cubeCamera = new THREE.CubeCamera(0.1, 100, this.cubeRenderTarget);
+
+      // Position the cube camera
+      this.cubeCamera.position.copy(position);
+
+      // Add the camera to the scene
+      this.scene.add(this.cubeCamera);
+
+      return this.cubeRenderTarget;
+    } catch (error) {
+      console.error("Failed to create cube camera:", error);
+      return null;
+    }
+  }
+
+  /**
+   * Updates the cube camera for real-time reflections
+   * This should be called before rendering the main camera
+   */
+  public updateCubeCamera(): void {
+    if (!this.cubeCamera || !this.cubeRenderTarget) return;
+
+    // Hide any objects you don't want in the reflection
+    // For example, you might want to hide the object that will use the reflection texture
+    const seaSurface = this.scene.getObjectByName("seaSurface");
+    if (seaSurface) seaSurface.visible = false;
+
+    // Also temporarily increase the intensity of lights for better reflections
+    const ambientLights = this.scene.children.filter(
+      (child) => child instanceof THREE.AmbientLight
+    ) as THREE.AmbientLight[];
+    const directionalLights = this.scene.children.filter(
+      (child) => child instanceof THREE.DirectionalLight
+    ) as THREE.DirectionalLight[];
+    const originalAmbientIntensities = ambientLights.map(
+      (light) => light.intensity
+    );
+    const originalDirectionalIntensities = directionalLights.map(
+      (light) => light.intensity
+    );
+
+    // Increase light intensity for reflections
+    ambientLights.forEach((light) => (light.intensity *= 1.2));
+    directionalLights.forEach((light) => (light.intensity *= 1.2));
+
+    // Update the cube camera (captures the scene from 6 directions)
+    this.cubeCamera.update(this.renderer, this.scene);
+
+    // Restore original light intensities
+    ambientLights.forEach(
+      (light, index) => (light.intensity = originalAmbientIntensities[index])
+    );
+    directionalLights.forEach(
+      (light, index) =>
+        (light.intensity = originalDirectionalIntensities[index])
+    );
+
+    // Make the sea surface visible again
+    if (seaSurface) seaSurface.visible = true;
+  }
+
+  /**
+   * Disposes of the cube camera and its render target
+   */
+  private disposeCubeCamera(): void {
+    if (this.cubeCamera) {
+      this.scene.remove(this.cubeCamera);
+      this.cubeCamera = null;
+    }
+
+    if (this.cubeRenderTarget) {
+      this.cubeRenderTarget.dispose();
+      this.cubeRenderTarget = null;
+    }
+  }
+
+  /**
+   * Creates a dynamic sky using Three.js Sky shader
+   * @param options Configuration options for the sky
+   */
+  public createSky(
+    options: {
+      turbidity?: number;
+      rayleigh?: number;
+      mieCoefficient?: number;
+      mieDirectionalG?: number;
+      elevation?: number;
+      azimuth?: number;
+    } = {}
+  ): void {
+    // Dispose previous sky if exists
+    if (this.sky) {
+      this.scene.remove(this.sky);
+      this.sky = null;
+    }
+
+    // Create the sky with atmospheric scattering
+    this.sky = new Sky();
+    this.sky.scale.setScalar(10000);
+    this.scene.add(this.sky);
+
+    // Configure sky shader uniforms
+    const skyUniforms = this.sky.material.uniforms;
+    skyUniforms["turbidity"].value = options.turbidity ?? 5;
+    skyUniforms["rayleigh"].value = options.rayleigh ?? 1.5;
+    skyUniforms["mieCoefficient"].value = options.mieCoefficient ?? 0.01;
+    skyUniforms["mieDirectionalG"].value = options.mieDirectionalG ?? 0.3;
+
+    // Update sun position based on elevation and azimuth
+    this.updateSunPosition({
+      elevation: options.elevation ?? 4,
+      azimuth: options.azimuth ?? 90,
+    });
+
+    console.log("Created dynamic sky with atmospheric scattering");
+  }
+
+  /**
+   * Updates the sun position based on elevation and azimuth angles
+   * @param params Configuration parameters for sun position
+   */
+  public updateSunPosition(
+    params: {
+      elevation?: number; // Elevation angle in degrees
+      azimuth?: number; // Azimuth angle in degrees
+    } = {}
+  ): void {
+    const elevation = params.elevation ?? 45;
+    const azimuth = params.azimuth ?? 180;
+
+    // Convert angles to radians and calculate sun position
+    const phi = THREE.MathUtils.degToRad(90 - elevation);
+    const theta = THREE.MathUtils.degToRad(azimuth);
+
+    // Set sun position using spherical coordinates
+    this.sunPosition.setFromSphericalCoords(1000, phi, theta);
+
+    // Update sky shader with new sun position
+    if (this.sky) {
+      this.sky.material.uniforms["sunPosition"].value.copy(this.sunPosition);
+    }
+
+    // Update directional light to match sun position
+    if (this.directionalLight) {
+      this.directionalLight.position.copy(this.sunPosition);
+    }
+
+    // Emit event for any components that need to know about sun position changes
+    const event = new CustomEvent("sunPositionChanged", {
+      detail: { position: this.sunPosition.clone() },
+    });
+    window.dispatchEvent(event);
+  }
+
+  /**
+   * Get the current sun position
+   * @returns The current sun position vector
+   */
+  public getSunPosition(): THREE.Vector3 {
+    return this.sunPosition.clone();
+  }
+
+  /**
+   * Creates birds for the sea environment
+   * @param options Birds configuration options
+   */
+  public createBirds(options?: {
+    flockCount?: number;
+    birdHeight?: number;
+    direction?: THREE.Vector3;
+  }): void {
+    // Dispose previous birds if they exist
+    if (this.birds) {
+      this.birds.dispose();
+      this.birds = null;
+    }
+
+    // Skip creating birds if in performance mode with low effects intensity
+    if (this.isPerformanceMode && this.effectsIntensity < 0.5) {
+      return;
+    }
+
+    // Create birds with wind direction based on sunPosition
+    const windDirection = new THREE.Vector3(
+      -this.sunPosition.x,
+      0,
+      -this.sunPosition.z
+    ).normalize();
+
+    // Configure birds with performance-appropriate settings
+    const flockCount = this.isPerformanceMode
+      ? 2 // Fewer flocks in performance mode
+      : Math.round((options?.flockCount || 3) * this.effectsIntensity);
+
+    // Create new birds
+    this.birds = Birds.createBirds(this.scene, {
+      flockCount: flockCount,
+      birdHeight: options?.birdHeight || 50,
+      direction: options?.direction || windDirection,
+    });
+
+    console.log("Created birds effect", { flockCount, windDirection });
+  }
+
+  /**
+   * Animation loop
+   * @param delta Time since last frame in seconds
+   */
+  public animate(delta: number): void {
     // Calculate delta time
     const currentTime = performance.now();
     const deltaTime = (currentTime - this.lastUpdateTime) / 1000; // Convert to seconds
@@ -596,7 +949,30 @@ export class SceneManager {
       this.lensFlare.update(deltaTime);
     }
 
-    // Render the scene
+    // Update clouds if active
+    if (this.clouds) {
+      const windDirection = new THREE.Vector3(
+        -this.sunPosition.x,
+        0,
+        -this.sunPosition.z
+      ).normalize();
+
+      this.clouds.forEach((cloud) => {
+        cloud.update(windDirection, delta);
+      });
+    }
+
+    // Update birds if active
+    if (this.birds) {
+      this.birds.update(deltaTime);
+    }
+
+    // Update cube camera for sea reflections if it exists
+    if (this.cubeCamera && this.cubeRenderTarget) {
+      this.updateCubeCamera();
+    }
+
+    // Render the scene with the main camera
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -621,6 +997,12 @@ export class SceneManager {
       }
 
       this.skybox = null;
+    }
+
+    // Dispose sky
+    if (this.sky) {
+      this.scene.remove(this.sky);
+      this.sky = null;
     }
 
     // Dispose starfield
@@ -658,15 +1040,52 @@ export class SceneManager {
       this.lensFlare.dispose();
       this.lensFlare = null;
     }
+
+    // Dispose clouds
+    if (this.clouds) {
+      this.clouds.forEach((cloud) => cloud.dispose());
+      this.clouds = null;
+    }
+
+    // Dispose birds
+    if (this.birds) {
+      this.birds.dispose();
+      this.birds = null;
+    }
+
+    // Clean up cube camera
+    this.disposeCubeCamera();
   }
 
   private handleResize = (): void => {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    if (this.camera && this.renderer) {
+      this.camera.aspect = window.innerWidth / window.innerHeight;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+      // Maintain pixel ratio settings on resize
+      if (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        )
+      ) {
+        this.renderer.setPixelRatio(1.0);
+      } else {
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+      }
+    }
   };
 
   public setHUDRef(hudRef: any) {
     this.hudRef = hudRef;
+  }
+
+  /**
+   * Renders the current scene
+   */
+  public render(): void {
+    if (this.renderer && this.scene && this.camera) {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 }
