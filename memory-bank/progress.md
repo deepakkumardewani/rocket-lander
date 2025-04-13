@@ -582,3 +582,317 @@ These enhancements create a more dynamic and visually interesting space environm
   - Added styling for the "Back to Selection" button with hover and active state animations
 
 These changes improve the user experience by giving the player more control over when to return to the environment selection screen and by maintaining the consistent "Press Space to Start" flow after selecting an environment.
+
+## April 17, 2024
+
+### Sea Environment Implementation - Steps 4 & 5
+
+✅ **Completed**
+
+#### Step 4: Create Sea Surface Component
+
+- Created `src/game/SeaSurface.ts` to implement the sea surface with the following features:
+  - 100x100 units plane geometry with 32x32 segments for wave detail
+  - Custom shader material with blue color (0x1e90ff) and 0.8 opacity
+  - Vertex shader for animating realistic wave motion:
+    - Combined multiple sine waves with different frequencies for natural-looking water
+    - Parameterized wave height (0.2) and frequency (0.1) for easy adjustment
+    - Time-based animation for continuous wave movement
+  - Fragment shader for enhanced visual effects:
+    - Slight color variation based on wave height for depth appearance
+    - Subtle edge fading for better integration with the scene
+  - Proper resource disposal methods to prevent memory leaks
+
+#### Step 5: Add Sea Surface to Physics World
+
+- Extended `SeaSurface.ts` with physics integration:
+  - Created a static CANNON.Body with mass=0 and CANNON.Plane shape
+  - Set `collisionResponse: false` to make it non-collidable (visual only)
+  - Positioned at y=0 with proper rotation to match the visual representation
+  - Added methods to retrieve the mesh and body for integration
+  - Configured proper physics world integration with the existing engine
+- Updated `GameCanvas.vue` to:
+  - Import and integrate the SeaSurface component
+  - Create sea surface only when 'sea' environment is selected
+  - Add the sea surface to the scene for rendering
+  - Update the sea animation in the game loop
+  - Properly dispose of resources on component unmount
+  - Conditionally initialize environment-specific elements (space vs sea)
+
+These implementations provide a visually appealing animated sea surface that serves as the base for the sea environment. The non-collidable physics body ensures it's purely visual while maintaining consistency with the physics-based game architecture.
+
+## April 21, 2024
+
+### Sea Environment Implementation - Steps 6, 7, and 8
+
+✅ **Completed**
+
+#### Step 6: Create Boat Platform Component
+
+- Created `src/game/BoatPlatform.ts` to implement a boat landing platform with the following features:
+  - Rectangular box geometry (10x20x1 units) to represent a flat boat
+  - Wooden brown color (0x8b4513) with custom shininess and material settings
+  - Positioned at y=0.5 to float on the sea surface
+  - Static physics body (mass=0) with proper collision properties
+  - Methods for texture application and updating
+  - Proper resource disposal to prevent memory leaks
+  - Type-safe implementation with TypeScript interfaces and error handling
+
+#### Step 7: Update Platform Logic for Environment
+
+- Updated `src/game/GameCanvas.vue` to implement environment-specific platform logic:
+  - Added BoatPlatform import and reference in the component
+  - Modified platform initialization to check the `environment` state
+  - Created `Platform` for 'space' environment and `BoatPlatform` for 'sea' environment
+  - Updated collision detection to use the appropriate platform based on environment
+  - Modified texture updating logic to apply textures to the correct platform type
+  - Enhanced resource cleanup to properly dispose of all platform types
+  - Updated game loop to handle both platform types
+
+#### Step 8: Create Clear Blue Skybox
+
+- Enhanced `src/utils/assetLoader.ts` with sea skybox functionality:
+  - Added `loadSeaSkyboxTextures` method to create six blue sky textures
+  - Used solid light blue color (#87ceeb) for all skybox sides
+  - Implemented canvas-based texture generation for efficient loading
+  - Added proper error handling and resource management
+- Updated `src/game/sceneManager.ts` with new skybox methods:
+  - Added `createSeaSkybox` method to create a skybox with blue textures
+  - Created `createEnvironmentSkybox` method to select the appropriate skybox based on environment
+  - Ensured consistent dimensions between space and sea skyboxes
+- Modified `src/game/GameCanvas.vue` to use environment-appropriate skyboxes:
+  - Updated asset loading to get both space and sea skybox textures
+  - Modified initialization to use the environment-specific skybox
+
+These implementations provide a complete sea environment with a flat boat platform for landing and a clear blue skybox, properly integrated with the existing game architecture and respecting the environment selection.
+
+## April 24, 2024
+
+### Sea Environment Implementation - Steps 9 & 10
+
+✅ **Completed**
+
+#### Step 9: Create Cloud System
+
+- Created `src/game/Clouds.ts` to implement a cloud system for the sea environment with the following features:
+  - CloudsParams interface for specifying cloud configuration parameters
+  - Cloud generation using THREE.Sprite with semi-transparent white fluffy textures
+  - 10-15 cloud objects randomly positioned between y=20 and y=40, spread across x and z (-50 to 50)
+  - Slow horizontal drift animation using sine wave-based motion
+  - Default cloud texture generation using HTML Canvas when no texture is provided
+  - Methods for updating cloud positions, retrieving cloud group, and disposing resources
+  - Performance optimization with proper depth rendering and z-fighting prevention
+
+#### Step 10: Integrate Sea Environment into SceneManager
+
+- Updated `src/game/sceneManager.ts` to fully integrate the sea environment:
+  - Added Clouds import and property to the SceneManager class
+  - Implemented createClouds method similar to other visual effects (nebula, aurora)
+  - Updated the render loop to update clouds animation
+  - Added clouds cleanup in the dispose method to prevent memory leaks
+  - Extended the toggleEffect method to support enabling/disabling clouds
+  - Added environmental checks in GameCanvas.vue to initialize sea-specific elements only when sea environment is selected
+  - Added custom lighting for the sea environment with a brighter directional light (1.2 intensity) and increased ambient light (0.4 intensity)
+  - Ensured all resources are properly disposed when switching environments or unmounting the component
+
+These implementations provide a complete sea environment with animated waves, a boat platform for landing, a clear blue sky with slowly drifting clouds, and appropriate daylight. The environment is seamlessly integrated with the existing game mechanics, allowing the player to fly and land the rocket in a realistic sea setting.
+
+## May 5, 2024
+
+### Sea Environment Implementation - Steps 11, 12, 13, & 14
+
+✅ **Completed**
+
+#### Step 11: Update Lighting for Sea Environment
+
+- Updated the lighting system in GameCanvas.vue:
+  - Implemented environment-specific lighting that changes based on the selected environment ('space' or 'sea')
+  - For sea environment, used a brighter directional light (intensity 1.2) with position (10, 20, 10) to simulate bright daylight
+  - Added brighter ambient light (intensity 0.4) for the sea environment
+  - Properly configured shadows for all objects in the sea environment
+  - Used proper lookAt configuration to ensure shadows are cast correctly on the boat and sea surface
+
+#### Step 12: Update HUD for Environment Context
+
+- Enhanced `src/components/HUD.vue` to display environment information:
+  - Added an environment indicator in the top-left corner that shows the current environment ('Space' or 'Sea')
+  - Created a computed `environmentDisplay` property to properly capitalize the environment name
+  - Implemented a `platformName` computed property that returns 'Boat' or 'Platform' based on the current environment
+  - Updated all platform-related text in the UI to use the dynamic platformName
+  - Added more detailed crash message that mentions the current platform type (e.g., "Land safely on the Boat")
+  - Applied consistent styling to the environment indicator with the game state display
+
+#### Step 13: Add Boat Texture
+
+- Added boat texture support in `src/utils/assetLoader.ts`:
+  - Created `loadBoatTexture` method to load a wooden texture from `/src/assets/textures/boat_wood.png`
+  - Implemented proper error handling with fallback to a procedurally generated brown texture if the image fails to load
+  - Configured the texture with repeat settings for proper appearance on the boat surface
+  - Updated `GameCanvas.vue` to load and pass the boat texture to the BoatPlatform constructor
+  - Modified the BoatPlatform to prioritize using the boat-specific texture over the generic platform textures
+
+#### Step 14: Add Sea Environment Sound
+
+- Added sea environment audio:
+  - Updated `loadGameAssets` in `GameCanvas.vue` to conditionally load sea waves audio when in the sea environment
+  - Added sea waves sound file to assets folder at `/src/assets/audio/sea_waves.mp3`
+  - Implemented automatic playback of the ambient sea waves sound at reduced volume (0.3) when in the sea environment
+  - Added proper cleanup in the onUnmounted hook to stop the sea waves sound when component is unmounted
+  - Used looping audio for continuous ambient sea sound while in the environment
+
+These implementations provide a realistic sea environment with appropriate lighting, textures, audio, and UI context. The environment now has distinct visual and audio characteristics that differentiate it from the space environment while maintaining consistent game mechanics.
+
+## May 8, 2024
+
+### Sea Environment Improvements - Phase 1 (Steps 1-4)
+
+✅ **Completed**
+
+#### Step 1: Upgrade Sea Surface Geometry
+
+- Updated `src/game/SeaSurface.ts` to improve sea surface geometry:
+  - Increased plane geometry segments from 32x32 to 128x128 for significantly finer wave detail
+  - Maintained the base size of 100x100 units
+  - Added mesh scaling (1.5x) to ensure the sea spans the entire visible area
+  - Optimized the geometry initialization for better performance
+  - Added detailed comments explaining the changes
+
+#### Step 2: Enhance Wave Animation in Vertex Shader
+
+- Enhanced the vertex shader in `SeaSurface.ts` with sophisticated wave animation:
+  - Added two additional sine waves with different amplitudes (0.1 and 0.05) and frequencies (0.15 and 0.08)
+  - Implemented a directional component for waves to simulate wind-driven motion
+  - Added time-based offsets with different speeds for each wave component
+  - Implemented proper normal recalculation for accurate lighting
+  - Combined waves with carefully balanced weights for natural-looking results
+  - Added slope calculation for better visual fidelity
+
+#### Step 3: Improve Fragment Shader for Realism
+
+- Upgraded the fragment shader in `SeaSurface.ts` to achieve more realistic water appearance:
+  - Added fresnel effect for angle-dependent reflection with bias and power parameters
+  - Implemented subtle foam highlights on wave crests
+  - Changed base color to a deeper blue-green (0x1e8090) for more ocean-like appearance
+  - Added specular highlights using Blinn-Phong lighting model
+  - Added dynamic light reflection calculations based on view direction
+  - Improved edge fading and transparency effects
+  - Implemented color mixing based on wave height for depth perception
+
+#### Step 4: Add Normal Mapping for Wave Detail
+
+- Added normal mapping support for enhanced wave detail:
+  - Added `loadSeaNormalTexture` method to `src/utils/assetLoader.ts`
+  - Implemented fallback normal map generation using canvas gradients and noise
+  - Modified fragment shader to apply normal mapping with proper transformations
+  - Added TBN matrix calculation for accurate normal mapping
+  - Created proper texture tiling (4x4) for the normal map
+  - Updated `GameCanvas.vue` to load and pass the normal map to the sea surface
+  - Implemented proper texture memory management and cleanup
+
+These improvements significantly enhance the visual realism of the sea environment, transforming the basic sea surface into a dynamic ocean with layered waves, reflections, and proper lighting interaction. The enhanced vertex and fragment shaders create a much more compelling and immersive experience while maintaining good performance.
+
+## Feature 2: Sea Environment Enhancement
+
+### Step 1-4: Basic Sea Surface Implementation
+
+✅ **Completed**
+
+### Step 5: Enable Environment Reflection
+
+✅ **Completed**
+
+- Added `cubeCamera` and `cubeRenderTarget` properties to the `SceneManager` class
+- Implemented `createCubeCamera` method in `SceneManager` to create a cube camera positioned at y=5 above the sea surface
+- Added `updateCubeCamera` method to render the environment from the cube camera's perspective before the main camera renders
+- Implemented proper cleanup with `disposeCubeCamera` method
+- Modified `SeaSurface` class to accept a `reflectionTexture` parameter (cube render target)
+- Updated sea surface shaders to include reflection mapping:
+  - Added world position calculation in vertex shader for correct reflection mapping
+  - Implemented reflection vector calculation in fragment shader
+  - Added reflection intensity control with custom uniform
+  - Blended reflection with base color based on fresnel effect for realistic angle-dependent reflections
+- Updated `GameCanvas.vue` to create a cube camera during scene initialization and pass it to the sea surface
+- Ensured the rendering loop properly updates the cube camera before rendering the main scene
+
+### Step 6: Add Specular Highlights
+
+✅ **Completed**
+
+- Enhanced the fragment shader in `SeaSurface.ts` to calculate specular highlights using the Blinn-Phong model
+- Used the directional light information to determine specular reflection direction
+- Set specular power to 32 for sharp, sun-like reflections
+- Added specular intensity of 0.5 for realistic water highlights
+- Improved the interaction between specular highlights and reflections:
+  - Applied specular highlights on top of the final blended color (base + reflection)
+  - Positioned highlights based on wave normals for more realistic light interaction
+- Enhanced shader to ensure highlights appear more prominently on wave peaks
+
+## Sea Environment Improvements
+
+### Phase 2: Revamp Cloud System
+
+#### Step 8: Redesign Cloud Geometry
+
+✅ **Completed**
+
+- Updated `src/game/Clouds.ts` to replace `THREE.Sprite` with instanced `THREE.Mesh` using `SphereGeometry` for volumetric clouds
+- Increased cloud count to 20 for better visual density
+- Adjusted cloud positions to generate between y=15 and y=30, and x/z between -40 and 40
+- Improved cloud scaling by applying non-uniform random scaling on each axis
+- Randomized cloud rotations for more natural appearance
+- Added proper shadows to clouds by setting `castShadow = true`
+
+#### Step 9: Create Fluffy Cloud Texture
+
+✅ **Completed**
+
+- Added `loadCloudTexture` method to `src/utils/assetLoader.ts` to properly load cloud texture from `src/assets/textures/cloud.png`
+- Implemented texture loading error handling with fallback to procedural texture generation
+- Created `generateProceduralCloudTexture` method that generates a 256x256 cloud texture using:
+  - Multiple layers of noise for a fluffy appearance
+  - Radial gradients for soft edges
+  - Slight color variations for depth
+  - Central density for a more realistic look
+- Set proper texture wrapping with `THREE.ClampToEdgeWrapping`
+
+#### Step 10: Apply Volumetric Cloud Material
+
+✅ **Completed**
+
+- Replaced standard material with custom `THREE.ShaderMaterial` for clouds in `Clouds.ts`
+- Implemented vertex shader with:
+  - Position offset based on time and Perlin-like noise for dynamic puffiness
+  - Proper normal calculation for lighting
+- Created fragment shader with:
+  - Soft alpha cutoff (0.3) for fluffy cloud edges
+  - Subtle lighting based on normal and directional light
+  - Light-dependent coloring (white for lit areas, slight blue tint for shadowed areas)
+- Enabled transparency and double-sided rendering for proper cloud appearance
+
+#### Step 11: Animate Clouds Naturally
+
+✅ **Completed**
+
+- Enhanced cloud animation in the `update` method of `Clouds.ts`:
+  - Applied constant horizontal drift (x += 0.02 per frame, scaled by delta time)
+  - Added vertical oscillation using sine waves for gentle bobbing
+  - Implemented rotation (0.001 radians per frame) for more dynamic appearance
+  - Created loop mechanism to recycle clouds when they reach the edge of the scene
+  - Applied different random phase values to each cloud for varied movement
+- Added proper time-based animation to ensure consistent movement across different frame rates
+
+#### Step 12: Add Cloud Shadows
+
+✅ **Completed**
+
+- Enabled `castShadow` on all cloud meshes to create realistic shadows
+- Extended directional light's shadow camera bounds in `sceneManager.ts` to properly capture cloud shadows:
+  - Increased bounds from ±20 to ±50 on all axes
+  - Adjusted shadow bias to -0.0001 to reduce shadow artifacts
+- Enhanced the `createClouds` method in `SceneManager.ts` to:
+  - Properly load cloud textures via the asset loader
+  - Scale cloud count based on performance mode and effects intensity
+  - Apply shadow settings to all cloud meshes
+- Updated `SeaSurface.ts` to properly receive shadows:
+  - Added custom depth material for proper shadow rendering with wave animation
+  - Ensured proper resource cleanup in the dispose method
