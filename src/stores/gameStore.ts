@@ -8,7 +8,21 @@ export type GameState =
   | "flying"
   | "landed"
   | "crashed";
-export type TextureType = "metal" | "neon";
+export type TextureType =
+  // Boat textures
+  | "vintage"
+  | "boat_1"
+  | "boat_2"
+  | "boat_3"
+  // Platform textures
+  | "metallic"
+  | "metallic_1"
+  | "metallic_2"
+  | "metallic_3"
+  | "gold"
+  | "neon"
+  | "night_sky"
+  | "platform_1";
 export type Environment = "space" | "sea" | "";
 
 export interface LandingMetrics {
@@ -43,7 +57,7 @@ export const useGameStore = defineStore("game", () => {
   const isLanded = ref<boolean>(false);
   const gameState = ref<GameState>("waiting");
   const showGameCanvas = ref<boolean>(false);
-  const textureChoice = ref<TextureType>("metal");
+  const textureChoice = ref<TextureType>("platform_1");
   const environment = ref<Environment>("");
 
   // Getters (computed values)
@@ -122,6 +136,12 @@ export const useGameStore = defineStore("game", () => {
    */
   function setEnvironment(env: Environment): void {
     environment.value = env;
+    // Set default texture based on environment
+    if (env === "sea") {
+      textureChoice.value = "vintage";
+    } else if (env === "space") {
+      textureChoice.value = "platform_1";
+    }
     // Keep game state as waiting until explicitly started
     gameState.value = "waiting";
   }
