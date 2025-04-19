@@ -28,10 +28,27 @@ const platformName = computed(() => {
 // });
 
 // Texture options for UI display
-const textureOptions = [
-  { value: "metal", label: "Metal" },
-  { value: "neon", label: "Neon" },
-];
+const textureOptions = computed(() => {
+  if (environment.value === "sea") {
+    return [
+      { value: "vintage", label: "Vintage Boat" },
+      { value: "boat_1", label: "Classic Boat" },
+      { value: "boat_2", label: "Modern Boat" },
+      { value: "boat_3", label: "Future Boat" },
+    ];
+  } else {
+    return [
+      { value: "metallic", label: "Metallic" },
+      { value: "metallic_1", label: "Steel" },
+      { value: "metallic_2", label: "Chrome" },
+      { value: "metallic_3", label: "Iron" },
+      { value: "gold", label: "Gold" },
+      { value: "neon", label: "Neon" },
+      { value: "night_sky", label: "Night Sky" },
+      { value: "platform_1", label: "Classic" },
+    ];
+  }
+});
 
 // Handle texture change
 const changeTexture = (event: Event) => {
@@ -131,7 +148,7 @@ defineExpose({
           v-if="environment"
           class="px-2.5 py-1 rounded font-semibold tracking-wider text-sm uppercase text-white bg-indigo-500"
         >
-          {{ environmentDisplay }}
+          {{ environment }}
         </div> -->
       </div>
 
@@ -237,7 +254,7 @@ defineExpose({
         <div
           class="flex justify-between bg-emerald-400/10 border border-emerald-400/20 rounded p-2 px-3 text-white"
         >
-          <span class="text-sm font-semibold tracking-wider">SCORE</span>
+          <span class="text-xl font-semibold tracking-wider">SCORE</span>
           <span class="text-xl font-bold tabular-nums">{{ score }}</span>
         </div>
       </div>
@@ -312,7 +329,7 @@ defineExpose({
         :max="MAX_ZOOM"
         v-model="zoomValue"
         @input="handleZoomChange"
-        class="w-full h-1 bg-[rgba(30,30,30,0.6)] rounded cursor-pointer outline-none appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:hover:shadow-[0_0_10px_rgba(79,70,229,0.4)] [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-indigo-600 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:transition-all [&::-moz-range-thumb]:duration-200 [&::-moz-range-thumb]:hover:scale-110 [&::-moz-range-thumb]:hover:shadow-[0_0_10px_rgba(79,70,229,0.4)]"
+        class="w-full h-1 bg-indigo-600/20 rounded cursor-pointer outline-none appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-indigo-600 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:transition-all [&::-webkit-slider-thumb]:duration-200 [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:hover:shadow-[0_0_10px_rgba(79,70,229,0.4)] [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-indigo-600 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:transition-all [&::-moz-range-thumb]:duration-200 [&::-moz-range-thumb]:hover:scale-110 [&::-moz-range-thumb]:hover:shadow-[0_0_10px_rgba(79,70,229,0.4)]"
       />
     </div>
   </div>
