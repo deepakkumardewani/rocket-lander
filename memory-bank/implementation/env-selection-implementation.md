@@ -62,7 +62,7 @@ This implementation plan outlines the steps to add a new "Sea" environment to th
 
 - **Instruction**: In `src/utils/assetLoader.ts`, add a `loadSeaAudio` method to load a looping ambient sea wave sound from `src/assets/audio/sea_waves.mp3`. In `GameCanvas.vue`, play the sound when the 'sea' environment is active and stop it when switching environments or unmounting. Adjust volume to 0.3 for subtlety.
 
-## Step 15: Test Environment Switching ✅
+## Step 15: Test Environment Switchingi
 
 - **Instruction**: In `GameCanvas.vue`, ensure all environment-specific objects (sea surface, boat, clouds, skybox, lighting, audio) are properly disposed of when the environment changes or the component unmounts. Update the game reset logic to reinitialize the correct environment based on the store’s `environment` state.
 
