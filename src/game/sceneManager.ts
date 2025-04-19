@@ -8,9 +8,7 @@ import { Nebula } from "./Nebula";
 import { Aurora } from "./Aurora";
 import { LensFlare } from "./LensFlare";
 import { Cloud } from "./Clouds";
-import { assetLoader } from "../utils/assetLoader";
 import { Birds } from "./Birds";
-import { CloudV2 } from "./CloudV2";
 
 /**
  * Creates and configures the Three.js scene
@@ -189,7 +187,6 @@ export class SceneManager {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     // Set pixel ratio based on device for better performance
-    // For mobile devices, use a lower pixel ratio
     if (
       /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
@@ -203,17 +200,17 @@ export class SceneManager {
     this.camera.position.set(0, 20, 30);
     this.camera.lookAt(0, 0, 0);
 
-    // Add ambient light with more intensity for better overall illumination
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    // Add ambient light with soft blue tint for sky color reflection
+    const ambientLight = new THREE.AmbientLight(0xd4e9ff, 0.4);
     this.scene.add(ambientLight);
 
-    // Add directional light with enhanced shadow settings
-    this.directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    // Add main directional light with warm sunset color
+    this.directionalLight = new THREE.DirectionalLight(0xffeddb, 0.5);
     this.directionalLight.position.copy(this.sunPosition);
     this.directionalLight.lookAt(0, 0, 0);
     this.directionalLight.castShadow = true;
 
-    // Configure shadow properties for better quality and extended range for clouds
+    // Configure shadow properties for soft, natural shadows
     this.directionalLight.shadow.mapSize.width = 2048;
     this.directionalLight.shadow.mapSize.height = 2048;
     this.directionalLight.shadow.camera.near = 0.1;
@@ -223,15 +220,20 @@ export class SceneManager {
     this.directionalLight.shadow.camera.top = 25;
     this.directionalLight.shadow.camera.bottom = -25;
     this.directionalLight.shadow.bias = -0.0005;
+    this.directionalLight.shadow.radius = 3; // Increased shadow softness
 
-    // Add a second directional light from different angle to fill shadows
-    const fillLight = new THREE.DirectionalLight(0xffffcc, 0.5);
+    // Add a subtle fill light from the opposite direction
+    const fillLight = new THREE.DirectionalLight(0x9ab9ff, 0.2); // Soft blue color
     fillLight.position.set(-15, 10, -10);
     fillLight.lookAt(0, 0, 0);
     this.scene.add(fillLight);
 
-    // Add a subtle blue-tinted hemisphere light for sea environment ambience
-    const hemisphereLight = new THREE.HemisphereLight(0xaaccff, 0x102030, 0.4);
+    // Add hemisphere light for ambient environment lighting
+    const hemisphereLight = new THREE.HemisphereLight(
+      0x9ab9ff, // Sky color - soft blue
+      0xffe1cc, // Ground color - soft peach
+      0.3
+    );
     this.scene.add(hemisphereLight);
 
     this.scene.add(this.directionalLight);

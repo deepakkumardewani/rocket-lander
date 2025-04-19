@@ -46,6 +46,10 @@ let cleanupCollisionHandlers: (() => void) | null = null;
 const hudRef = ref<InstanceType<typeof HUD> | null>(null);
 let lastFrameTime = performance.now();
 
+// Camera position storage
+let defaultCameraPosition: THREE.Vector3 | null = null;
+let defaultCameraTarget: THREE.Vector3 | null = null;
+
 // Interval references for cleanup
 let shootingStarInterval: number | null = null;
 let auroraInterval: number | null = null;
@@ -68,6 +72,74 @@ const LANDING_SOUND_VELOCITY_THRESHOLD = -2; // Velocity threshold to play landi
 
 // Get the game store
 const gameStore = useGameStore();
+
+// Watch for game state changes to handle camera controls
+watch(
+  () => gameStore.gameState,
+  (newState, oldState) => {
+    if (!sceneManager) return;
+
+    // If transitioning to flying state, reset the camera
+    if (newState === "flying" && oldState !== "flying") {
+      resetCamera();
+
+      // Disable camera controls in flying state
+      sceneManager.controls.enabled = false;
+    }
+    // Re-enable camera controls when not in flying state
+    else if (newState !== "flying") {
+      sceneManager.controls.enabled = true;
+    }
+  }
+);
+
+// Function to reset camera to default position
+const resetCamera = () => {
+  if (!sceneManager || !defaultCameraPosition || !defaultCameraTarget) return;
+
+  // Smoothly animate to default position
+  const startPosition = sceneManager.camera.position.clone();
+  const startTarget = sceneManager.controls.target.clone();
+  const startTime = performance.now();
+  const duration = 1000; // 1 second transition
+
+  const animateCameraReset = () => {
+    if (!sceneManager || !defaultCameraPosition || !defaultCameraTarget) return;
+
+    const elapsed = performance.now() - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Use easing function for smoother transition
+    const eased = easeOutCubic(progress);
+
+    // Interpolate position and target
+    sceneManager.camera.position.lerpVectors(
+      startPosition,
+      defaultCameraPosition,
+      eased
+    );
+
+    sceneManager.controls.target.lerpVectors(
+      startTarget,
+      defaultCameraTarget,
+      eased
+    );
+
+    // Update controls and projection
+    sceneManager.controls.update();
+
+    if (progress < 1) {
+      requestAnimationFrame(animateCameraReset);
+    }
+  };
+
+  animateCameraReset();
+};
+
+// Easing function for smoother camera animation
+const easeOutCubic = (x: number): number => {
+  return 1 - Math.pow(1 - x, 3);
+};
 
 // Constants for game physics
 const THRUST_FORCE = 15; // Force magnitude for rocket thrust
@@ -128,11 +200,12 @@ const loadGameAssets = async (): Promise<void> => {
     // Load platform textures
     await assetLoader.loadPlatformTextures();
 
-    // Load boat texture if in sea environment
-    let boatTexture: THREE.Texture | null = null;
+    // Initialize variables
     let seaNormalMap: THREE.Texture | null = null;
+
+    // Load boat textures if in sea environment
     if (gameStore.environment === "sea") {
-      boatTexture = await assetLoader.loadBoatTexture();
+      await assetLoader.loadBoatTextures();
       // Load sea normal map texture for enhanced water detail
       seaNormalMap = await assetLoader.loadSeaNormalTexture();
     }
@@ -143,12 +216,23 @@ const loadGameAssets = async (): Promise<void> => {
     // Load star texture
     const starTexture = await assetLoader.loadStarTexture();
 
+    // Get the current texture based on environment and texture choice
+    const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
+    if (!currentTexture) {
+      throw new Error(`Failed to load texture: ${gameStore.textureChoice}`);
+    }
+
     // Assets loaded successfully
     isLoading.value = false;
     console.log("All assets loaded successfully");
 
-    // Initialize the game scene
-    initializeGameScene(spaceTextures, starTexture, boatTexture, seaNormalMap);
+    // Initialize the game scene with the current texture
+    initializeGameScene(
+      spaceTextures,
+      starTexture,
+      currentTexture,
+      seaNormalMap
+    );
   } catch (error) {
     handleAssetError(
       "Failed to load game assets",
@@ -170,6 +254,10 @@ const initializeGameScene = (
   try {
     // Initialize the scene manager
     sceneManager = new SceneManager(canvasContainer.value);
+
+    // Store default camera position after scene is set up
+    defaultCameraPosition = sceneManager.camera.position.clone();
+    defaultCameraTarget = sceneManager.controls.target.clone();
 
     // Create skybox based on environment
     if (gameStore.environment === "space") {
@@ -247,22 +335,31 @@ const initializeGameScene = (
 
       // Create the dynamic sky with atmospheric scattering
       sceneManager.createSky({
-        turbidity: 2.5, // Further reduced for clearer sky
-        rayleigh: 1.0, // Adjusted for better blue
-        mieCoefficient: 0.005, // Reduced for less harsh sun scattering
-        mieDirectionalG: 0.7, // Reduced for softer sun effect
-        elevation: 25, // Slightly higher sun
-        azimuth: 180,
+        turbidity: 1.2, // Reduced for clearer, softer sky
+        rayleigh: 2.0, // Increased for stronger blue scatter in upper sky
+        mieCoefficient: 0.015, // Adjusted for sunset-like scattering
+        mieDirectionalG: 0.85, // Increased for stronger horizon effects
+        elevation: 5, // Very low sun position for horizon colors
+        azimuth: 180, // Keep sun position
       });
 
-      // Add ambient light with more intensity for better overall illumination
-      const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+      // Add ambient light with soft intensity for pastel look
+      const ambientLight = new THREE.AmbientLight(0xd4e9ff, 0.6); // Soft blue tint
+
       sceneManager.scene.add(ambientLight);
 
-      // Add directional light with reduced intensity
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8); // Reduced intensity
+      // Add directional light with warm color for horizon glow
+      const directionalLight = new THREE.DirectionalLight(0xffeddb, 0.4); // Warm peach color
       directionalLight.position.copy(sceneManager.getSunPosition());
       sceneManager.scene.add(directionalLight);
+
+      // Add a hemisphere light for sky-ground color interaction
+      const hemisphereLight = new THREE.HemisphereLight(
+        0x9ab9ff, // Sky color - soft blue
+        0xffe1cc, // Ground color - soft peach
+        0.6
+      );
+      sceneManager.scene.add(hemisphereLight);
 
       // Create and add the boat platform with the selected texture
       boatPlatform = new BoatPlatform({
@@ -531,6 +628,11 @@ const initializeGameScene = (
         // Now make rocket static again until space is pressed
         rocketBody.type = CANNON.Body.STATIC;
 
+        // Re-enable camera controls when resetting
+        if (sceneManager) {
+          sceneManager.controls.enabled = true;
+        }
+
         return;
       }
 
@@ -565,6 +667,12 @@ const initializeGameScene = (
           assetLoader.stopAudio("rocket-thrust");
           isThrusterSoundPlaying = false;
         }
+
+        // Re-enable camera controls when game ends
+        if (sceneManager) {
+          sceneManager.controls.enabled = true;
+        }
+
         return;
       }
 
@@ -576,6 +684,12 @@ const initializeGameScene = (
           inputHandler.isThrust())
       ) {
         gameStore.setGameState("flying");
+
+        // Reset camera to default position and disable controls
+        resetCamera();
+        if (sceneManager) {
+          sceneManager.controls.enabled = false;
+        }
       }
 
       const rocketBody = rocket.getBody();
@@ -781,15 +895,8 @@ onUnmounted(() => {
     </div>
 
     <!-- Back to Selection Button -->
-    <div
-      v-if="
-        !isLoading &&
-        (gameStore.gameState === 'landed' || gameStore.gameState === 'crashed')
-      "
-      class="back-button"
-      @click="emit('game-end')"
-    >
-      Back to Selection
+    <div v-if="!isLoading" class="back-button" @click="emit('game-end')">
+      Select Environment
     </div>
 
     <!-- HUD -->
