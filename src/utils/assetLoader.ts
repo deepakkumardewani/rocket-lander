@@ -429,57 +429,6 @@ export class AssetLoader {
     }
   }
 
-  /**
-   * Load sea skybox textures with solid light blue color
-   * @returns Promise that resolves with an array of 6 textures for sea skybox
-   */
-  public async loadSeaSkyboxTextures(): Promise<THREE.Texture[]> {
-    try {
-      // If textures already loaded, return them
-      if (this.loadedSeaSkyboxTextures.length === 6) {
-        return this.loadedSeaSkyboxTextures;
-      }
-
-      // Create six solid blue textures for the skybox
-      const skyBlueColor = 0x87ceeb; // Light blue color
-
-      // Create a small canvas for the texture
-      const size = 64; // Small size is sufficient for solid color
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const context = canvas.getContext("2d");
-
-      if (!context) {
-        throw new Error("Could not get canvas context");
-      }
-
-      // Fill canvas with sky blue color
-      context.fillStyle = `#${skyBlueColor.toString(16).padStart(6, "0")}`;
-      context.fillRect(0, 0, size, size);
-
-      // Create textures from the canvas
-      const textures: THREE.Texture[] = [];
-      for (let i = 0; i < 6; i++) {
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.needsUpdate = true;
-        textures.push(texture);
-      }
-
-      this.loadedSeaSkyboxTextures = textures;
-      return this.loadedSeaSkyboxTextures;
-    } catch (error) {
-      handleAssetError(
-        "Failed to create sea skybox textures",
-        error instanceof Error ? error : new Error(String(error))
-      );
-      // Return an array of placeholder textures (black) in case of error
-      return Array(6)
-        .fill(null)
-        .map(() => new THREE.Texture());
-    }
-  }
-
   // Load star texture for particle systems
   async loadStarTexture(): Promise<THREE.Texture> {
     try {
@@ -505,23 +454,34 @@ export class AssetLoader {
   }
 
   // Load platform textures (metal and neon)
-  async loadPlatformTextures(): Promise<PlatformTextures> {
+  async loadPlatformTextures(): Promise<Map<string, THREE.Texture>> {
     try {
-      const metalTexture = await this.textureLoader.loadAsync(
-        "/src/assets/textures/platform/metallic.png"
-      );
-      const neonTexture = await this.textureLoader.loadAsync(
-        "/src/assets/textures/platform/neon.png"
-      );
+      // Load all platform textures
+      const texturePaths = [
+        "/src/assets/textures/platform/metallic.png",
+        "/src/assets/textures/platform/metallic_1.png",
+        "/src/assets/textures/platform/metallic_2.png",
+        "/src/assets/textures/platform/metallic_3.png",
+        "/src/assets/textures/platform/gold.png",
+        "/src/assets/textures/platform/neon.png",
+        "/src/assets/textures/platform/night_sky.png",
+        "/src/assets/textures/platform/platform_1.jpg",
+      ];
 
-      // Store textures in the map
-      this.textures.set("metal", metalTexture);
-      this.textures.set("neon", neonTexture);
+      const platformTextures = await Promise.all(
+        texturePaths.map((path) => this.textureLoader.loadAsync(path))
+      );
+      // Store textures in the map with their corresponding keys
+      this.textures.set("metallic", platformTextures[0]);
+      this.textures.set("metallic_1", platformTextures[1]);
+      this.textures.set("metallic_2", platformTextures[2]);
+      this.textures.set("metallic_3", platformTextures[3]);
+      this.textures.set("gold", platformTextures[4]);
+      this.textures.set("neon", platformTextures[5]);
+      this.textures.set("night_sky", platformTextures[6]);
+      this.textures.set("platform_1", platformTextures[7]);
 
-      return {
-        metal: metalTexture,
-        neon: neonTexture,
-      };
+      return this.textures;
     } catch (error) {
       handleAssetError(
         "Failed to load platform textures",
@@ -531,37 +491,33 @@ export class AssetLoader {
     }
   }
 
-  // Load boat texture for the sea environment
-  async loadBoatTexture(): Promise<THREE.Texture> {
+  // Load boat textures
+  async loadBoatTextures(): Promise<Map<string, THREE.Texture>> {
     try {
-      const boatTexture = await this.textureLoader.loadAsync(
-        "/src/assets/textures/boat/boat_1.jpg"
+      // Load all boat textures
+      const texturePaths = [
+        "/src/assets/textures/boat/vintage.jpg",
+        "/src/assets/textures/boat/boat_1.jpg",
+        "/src/assets/textures/boat/boat_2.jpg",
+        "/src/assets/textures/boat/boat_3.png",
+      ];
+      const boatTextures = await Promise.all(
+        texturePaths.map((path) => this.textureLoader.loadAsync(path))
       );
 
-      // Configure texture for optimal appearance
-      boatTexture.wrapS = THREE.RepeatWrapping;
-      boatTexture.wrapT = THREE.RepeatWrapping;
-      boatTexture.repeat.set(1, 1);
+      // Store textures in the map with their corresponding keys
+      this.textures.set("vintage", boatTextures[0]);
+      this.textures.set("boat_1", boatTextures[1]);
+      this.textures.set("boat_2", boatTextures[2]);
+      this.textures.set("boat_3", boatTextures[3]);
 
-      // Store texture in the map
-      this.textures.set("boat_1", boatTexture);
-
-      console.log("Boat texture loaded successfully");
-      return boatTexture;
+      return this.textures;
     } catch (error) {
-      console.error("Failed to load boat texture:", error);
-      // Return a new texture with a brown color as fallback
-      const canvas = document.createElement("canvas");
-      canvas.width = 128;
-      canvas.height = 128;
-      const context = canvas.getContext("2d");
-      if (context) {
-        context.fillStyle = "#8b4513"; // Wooden brown color
-        context.fillRect(0, 0, 128, 128);
-      }
-      const fallbackTexture = new THREE.CanvasTexture(canvas);
-      this.textures.set("boat_1", fallbackTexture);
-      return fallbackTexture;
+      handleAssetError(
+        "Failed to load boat textures",
+        error instanceof Error ? error : new Error(String(error))
+      );
+      throw error;
     }
   }
 
@@ -758,73 +714,73 @@ export class AssetLoader {
    * Generates a procedural cloud texture
    * @returns Procedural cloud texture
    */
-  private generateProceduralCloudTexture(): THREE.Texture {
-    const size = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
+  // private generateProceduralCloudTexture(): THREE.Texture {
+  //   const size = 256;
+  //   const canvas = document.createElement("canvas");
+  //   canvas.width = size;
+  //   canvas.height = size;
+  //   const ctx = canvas.getContext("2d")!;
 
-    // Fill with transparent background
-    ctx.fillStyle = "rgba(0,0,0,0)";
-    ctx.fillRect(0, 0, size, size);
+  //   // Fill with transparent background
+  //   ctx.fillStyle = "rgba(0,0,0,0)";
+  //   ctx.fillRect(0, 0, size, size);
 
-    // Helper function for Perlin-like noise (simplified)
-    const noise = (x: number, y: number) => {
-      return Math.sin(x * 0.1) * Math.sin(y * 0.1) * 0.5 + 0.5;
-    };
+  //   // Helper function for Perlin-like noise (simplified)
+  //   const noise = (x: number, y: number) => {
+  //     return Math.sin(x * 0.1) * Math.sin(y * 0.1) * 0.5 + 0.5;
+  //   };
 
-    // Draw multiple noise layers for fluffy look
-    for (let i = 0; i < 5; i++) {
-      const offsetX = Math.random() * size * 0.2;
-      const offsetY = Math.random() * size * 0.2;
-      const scale = 0.5 + Math.random() * 0.5;
+  //   // Draw multiple noise layers for fluffy look
+  //   for (let i = 0; i < 5; i++) {
+  //     const offsetX = Math.random() * size * 0.2;
+  //     const offsetY = Math.random() * size * 0.2;
+  //     const scale = 0.5 + Math.random() * 0.5;
 
-      // Draw noise blob
-      for (let x = 0; x < size; x++) {
-        for (let y = 0; y < size; y++) {
-          // Calculate distance from center for circular gradient
-          const dx = x - size / 2;
-          const dy = y - size / 2;
-          const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
+  //     // Draw noise blob
+  //     for (let x = 0; x < size; x++) {
+  //       for (let y = 0; y < size; y++) {
+  //         // Calculate distance from center for circular gradient
+  //         const dx = x - size / 2;
+  //         const dy = y - size / 2;
+  //         const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
 
-          // Create noise value
-          const noiseVal = noise((x + offsetX) * scale, (y + offsetY) * scale);
+  //         // Create noise value
+  //         const noiseVal = noise((x + offsetX) * scale, (y + offsetY) * scale);
 
-          // Create radial gradient that fades at the edges
-          const edgeFade = Math.max(0, 1 - distFromCenter);
-          const alpha = noiseVal * edgeFade * edgeFade * 0.2; // Lower alpha for layering
+  //         // Create radial gradient that fades at the edges
+  //         const edgeFade = Math.max(0, 1 - distFromCenter);
+  //         const alpha = noiseVal * edgeFade * edgeFade * 0.2; // Lower alpha for layering
 
-          // Use slightly varied white for depth
-          const colorVal = 220 + noiseVal * 35;
+  //         // Use slightly varied white for depth
+  //         const colorVal = 220 + noiseVal * 35;
 
-          ctx.fillStyle = `rgba(${colorVal},${colorVal},${colorVal},${alpha})`;
-          ctx.fillRect(x, y, 1, 1);
-        }
-      }
-    }
+  //         ctx.fillStyle = `rgba(${colorVal},${colorVal},${colorVal},${alpha})`;
+  //         ctx.fillRect(x, y, 1, 1);
+  //       }
+  //     }
+  //   }
 
-    // Add central density
-    for (let x = 0; x < size; x++) {
-      for (let y = 0; y < size; y++) {
-        const dx = x - size / 2;
-        const dy = y - size / 2;
-        const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
+  //   // Add central density
+  //   for (let x = 0; x < size; x++) {
+  //     for (let y = 0; y < size; y++) {
+  //       const dx = x - size / 2;
+  //       const dy = y - size / 2;
+  //       const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
 
-        if (distFromCenter < 0.5) {
-          const alpha = (1 - distFromCenter * 2) * 0.3;
-          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-          ctx.fillRect(x, y, 1, 1);
-        }
-      }
-    }
+  //       if (distFromCenter < 0.5) {
+  //         const alpha = (1 - distFromCenter * 2) * 0.3;
+  //         ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+  //         ctx.fillRect(x, y, 1, 1);
+  //       }
+  //     }
+  //   }
 
-    // Create texture from canvas
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    return texture;
-  }
+  //   // Create texture from canvas
+  //   const texture = new THREE.CanvasTexture(canvas);
+  //   texture.wrapS = THREE.ClampToEdgeWrapping;
+  //   texture.wrapT = THREE.ClampToEdgeWrapping;
+  //   return texture;
+  // }
 }
 
 // Create and export a singleton instance for use throughout the app
