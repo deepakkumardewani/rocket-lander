@@ -139,7 +139,7 @@ onUnmounted(() => {
           class="w-full px-4 py-3 rounded-lg bg-gray-800/80 border border-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white backdrop-blur-sm transition-all hover:border-cyan-500"
         >
           <option value="space">Deep Space</option>
-          <option value="sea">Ocean Platform</option>
+          <option value="sea">Ocean</option>
         </select>
       </div>
 

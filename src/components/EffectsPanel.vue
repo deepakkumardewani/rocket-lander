@@ -53,17 +53,17 @@ function updateIntensity() {
 }
 
 // Toggle performance mode
-function togglePerformanceMode(enabled: boolean) {
-  if (props.sceneManager) {
-    props.sceneManager.setPerformanceMode(enabled);
-  }
-}
+// function togglePerformanceMode(enabled: boolean) {
+//   if (props.sceneManager) {
+//     props.sceneManager.setPerformanceMode(enabled);
+//   }
+// }
 
 // Toggle individual effects
 function toggleEffect(effect: EffectType) {
   if (props.sceneManager) {
     effectsState.value[effect] = !effectsState.value[effect];
-    props.sceneManager.toggleEffect(effect, effectsState.value[effect]);
+    // props.sceneManager.toggleEffect(effect, effectsState.value[effect]);
   }
 }
 
@@ -72,7 +72,7 @@ onMounted(() => {
   // Update FPS counter every second
   setInterval(() => {
     if (props.sceneManager) {
-      fpsValue.value = props.sceneManager.getFPS();
+      // fpsValue.value = props.sceneManager.getFPS();
     }
   }, 1000);
 });
@@ -104,7 +104,7 @@ onMounted(() => {
         />
       </div>
 
-      <div class="control-group">
+      <!-- <div class="control-group">
         <button
           @click="togglePerformanceMode(true)"
           class="mode-button"
@@ -119,7 +119,7 @@ onMounted(() => {
         >
           Quality Mode
         </button>
-      </div>
+      </div> -->
 
       <div class="control-group effects-toggles">
         <div v-for="effect in effectTypes" :key="effect" class="effect-toggle">
