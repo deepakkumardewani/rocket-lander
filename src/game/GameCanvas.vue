@@ -4,9 +4,8 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { SceneManager } from "./sceneManager";
 import { Rocket } from "./Rocket";
-import { Platform } from "./Platform";
-import { BoatPlatform } from "./BoatPlatform";
-import { Obstacle } from "./Obstacle";
+import { Platform } from "./space/Platform";
+import { Obstacle } from "./space/Obstacle";
 import {
   updatePhysics,
   syncMeshWithBody,
@@ -31,8 +30,8 @@ import { assetLoader, AssetType } from "../utils/assetLoader";
 import HUD from "../components/HUD/HUD.vue";
 import LoadingScreen from "../components/LoadingScreen.vue";
 import EffectsPanel from "../components/EffectsPanel.vue";
-import { Terrain } from "./Terrain";
-import { SeaSurface } from "./SeaSurface";
+import { Terrain } from "./space/Terrain";
+import { SeaSurface } from "./sea/SeaSurface";
 import { spaceLevels, seaLevels } from "./levels";
 import type { LevelConfig } from "./levels";
 
@@ -50,7 +49,7 @@ const loadingProgress = ref(0);
 let sceneManager: SceneManager | null = null;
 let rocket: Rocket | null = null;
 let platform: Platform | null = null;
-let boatPlatform: BoatPlatform | null = null;
+// let boatPlatform: BoatPlatform | null = null;
 let terrain: Terrain | null = null;
 let seaSurface: SeaSurface | null = null;
 let animationFrameId: number | null = null;
@@ -85,8 +84,6 @@ const ROTATION_DAMPING = 0.95; // Damping factor for rotation
 const levelConfig = computed<LevelConfig | null>(() => {
   const { environment, currentLevel } = gameStore;
 
-  console.log("environment", environment);
-  console.log("currentLevel", currentLevel);
   if (environment === "space") {
     return (
       spaceLevels.find((level) => level.levelNumber === currentLevel) || null
@@ -383,12 +380,13 @@ const initializeGameScene = (
       sceneManager.scene.add(hemisphereLight);
 
       // Create and add the boat platform with the selected texture
-      boatPlatform = new BoatPlatform({
+      platform = new Platform({
         width: levelConfig.value?.platformWidth || 10,
         depth: levelConfig.value?.platformDepth || 20,
         texture: boatTexture || currentTexture,
+        color: 0x8b4513,
       });
-      boatPlatform.addToScene(sceneManager.scene);
+      platform.addToScene(sceneManager.scene);
 
       // Create cloud system with reference implementation parameters
       sceneManager.createClouds({
@@ -475,10 +473,10 @@ const initializeGameScene = (
         if (crashParticles) {
           sceneManager.scene.add(crashParticles.getMesh());
         }
-      } else if (gameStore.environment === "sea" && boatPlatform) {
+      } else if (gameStore.environment === "sea" && platform) {
         cleanupCollisionHandlers = registerCollisionHandlers(
           rocket.getBody(),
-          boatPlatform.getBody(),
+          platform.getBody(),
           // Add callback for successful landing
           () => {
             // Play landing sound when successfully landed
@@ -528,8 +526,8 @@ const initializeGameScene = (
 
         if (gameStore.environment === "space" && platform) {
           platform.updateTexture(texture);
-        } else if (gameStore.environment === "sea" && boatPlatform) {
-          boatPlatform.updateTexture(texture);
+        } else if (gameStore.environment === "sea" && platform) {
+          platform.updateTexture(texture);
         }
       }
     );
@@ -1067,23 +1065,23 @@ watch(
             sceneManager.scene.add(crashParticles.getMesh());
           }
         }
-      } else if (gameStore.environment === "sea" && boatPlatform) {
+      } else if (gameStore.environment === "sea" && platform) {
         // Update boat platform for sea levels
         if (sceneManager?.scene) {
-          boatPlatform.removeFromScene(sceneManager.scene);
+          platform.removeFromScene(sceneManager.scene);
         }
-        boatPlatform.dispose();
+        platform.dispose();
 
         // Create new boat platform with updated dimensions
         const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
-        boatPlatform = new BoatPlatform({
+        platform = new Platform({
           width: levelConfig.value?.platformWidth || 10,
           depth: levelConfig.value?.platformDepth || 20,
           texture: currentTexture,
         });
 
         if (sceneManager) {
-          boatPlatform.addToScene(sceneManager.scene);
+          platform.addToScene(sceneManager.scene);
         }
 
         // Update sea wave height if applicable
@@ -1097,7 +1095,7 @@ watch(
 
           cleanupCollisionHandlers = registerCollisionHandlers(
             rocket.getBody(),
-            boatPlatform.getBody(),
+            platform.getBody(),
             // Add callback for successful landing
             () => {
               // Play landing sound when successfully landed
@@ -1166,12 +1164,6 @@ onUnmounted(() => {
   if (platform) {
     platform.dispose();
     platform = null;
-  }
-
-  // Clean up boat platform resources
-  if (boatPlatform) {
-    boatPlatform.dispose();
-    boatPlatform = null;
   }
 
   // Clean up terrain resources
