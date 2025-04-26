@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
+import { spaceLevels, seaLevels } from "../game/levels";
 
 // Game state types
 export type GameState =
@@ -45,6 +46,8 @@ export interface GameStateValues {
   gameState: GameState;
   textureChoice: TextureType;
   environment: Environment;
+  currentLevel: number;
+  isLevelCompleted: boolean;
 }
 
 /**
@@ -55,10 +58,15 @@ export const useGameStore = defineStore("game", () => {
   const fuel = ref<number>(100);
   const score = ref<number>(0);
   const isLanded = ref<boolean>(false);
+  const totalLevels = ref<number>(5);
   const gameState = ref<GameState>("waiting");
   const showGameCanvas = ref<boolean>(false);
   const textureChoice = ref<TextureType>("platform_1");
   const environment = ref<Environment>("");
+  const currentLevel = ref<number>(1);
+  const isLevelCompleted = ref<boolean>(false);
+  const crashMetrics = ref<LandingMetrics | null>(null);
+  const shouldResetRocket = ref<boolean>(false);
 
   // Getters (computed values)
   const hasFuel = computed(() => fuel.value > 0);
@@ -94,6 +102,12 @@ export const useGameStore = defineStore("game", () => {
   function calculateScore(metrics: LandingMetrics): number {
     const { position, velocity } = metrics;
 
+    // Store crash metrics if game state is crashed
+    if (gameState.value === "crashed") {
+      crashMetrics.value = metrics;
+      return 0;
+    }
+
     // Position precision (center is best: 100 points, edges are 0)
     const positionPrecision = Math.max(0, 100 - 20 * Math.abs(position.x));
 
@@ -120,6 +134,9 @@ export const useGameStore = defineStore("game", () => {
   function setGameState(newState: GameState): void {
     gameState.value = newState;
     isLanded.value = newState === "landed";
+    if (newState !== "crashed") {
+      crashMetrics.value = null;
+    }
   }
 
   /**
@@ -156,15 +173,52 @@ export const useGameStore = defineStore("game", () => {
   }
 
   /**
+   * Set the current level and reset level completion status
+   * @param level - The level number to set
+   */
+  function setCurrentLevel(level: number): void {
+    currentLevel.value = level;
+    isLevelCompleted.value = false;
+  }
+
+  /**
+   * Mark the current level as completed
+   */
+  function markLevelCompleted(): void {
+    isLevelCompleted.value = true;
+  }
+
+  /**
    * Reset the game state to initial values but maintain the environment if not reset explicitly
+   * @param resetRocket - Whether to flag the rocket for repositioning
    * @returns The reset state values
    */
-  function resetGame(): GameStateValues {
-    fuel.value = 100;
+  function resetGame(resetRocket: boolean = false): GameStateValues {
+    // Get the current level configuration to set appropriate fuel
+    let levelFuel = 100; // Default value
+    if (environment.value === "space") {
+      const levelConfig = spaceLevels.find(
+        (level) => level.levelNumber === currentLevel.value
+      );
+      if (levelConfig && levelConfig.startingFuel) {
+        levelFuel = levelConfig.startingFuel;
+      }
+    } else if (environment.value === "sea") {
+      const levelConfig = seaLevels.find(
+        (level) => level.levelNumber === currentLevel.value
+      );
+      if (levelConfig && levelConfig.startingFuel) {
+        levelFuel = levelConfig.startingFuel;
+      }
+    }
+
+    fuel.value = levelFuel;
     score.value = 0;
     isLanded.value = false;
     gameState.value = "waiting";
-    // Keep environment as is (don't reset to empty)
+    crashMetrics.value = null;
+    shouldResetRocket.value = resetRocket;
+    // Keep environment and level as is (don't reset)
 
     return {
       fuel: fuel.value,
@@ -173,6 +227,8 @@ export const useGameStore = defineStore("game", () => {
       gameState: gameState.value,
       textureChoice: textureChoice.value,
       environment: environment.value,
+      currentLevel: currentLevel.value,
+      isLevelCompleted: isLevelCompleted.value,
     };
   }
 
@@ -180,9 +236,20 @@ export const useGameStore = defineStore("game", () => {
    * Reset the game completely and go back to environment selection
    */
   function resetToSelection(): void {
+    console.log("resetToSelection");
     resetGame();
     environment.value = "";
     showGameCanvas.value = false;
+    currentLevel.value = 1;
+    isLevelCompleted.value = false;
+  }
+
+  /**
+   * Set the flag to reset the rocket position
+   * @param shouldReset - Whether to reset the rocket position
+   */
+  function setResetRocketFlag(shouldReset: boolean): void {
+    shouldResetRocket.value = shouldReset;
   }
 
   return {
@@ -194,6 +261,11 @@ export const useGameStore = defineStore("game", () => {
     textureChoice,
     environment,
     showGameCanvas,
+    currentLevel,
+    isLevelCompleted,
+    crashMetrics,
+    totalLevels,
+    shouldResetRocket,
     // Getters
     hasFuel,
     canFly,
@@ -207,5 +279,8 @@ export const useGameStore = defineStore("game", () => {
     startGame,
     resetGame,
     resetToSelection,
+    setCurrentLevel,
+    markLevelCompleted,
+    setResetRocketFlag,
   };
 });
