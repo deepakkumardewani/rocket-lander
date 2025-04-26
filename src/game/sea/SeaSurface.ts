@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { Water } from "three/addons/objects/Water.js";
-import { world } from "./physics";
+import { world } from "../physics";
 
 /**
  * Class to create and manage a sea surface with waves

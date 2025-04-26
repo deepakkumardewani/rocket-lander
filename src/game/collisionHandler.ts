@@ -1,8 +1,8 @@
 import * as CANNON from "cannon-es";
-import { Vec3 } from "cannon-es";
+// import { Vec3 } from "cannon-es";
 import * as THREE from "three";
 import { onCollision } from "./physics";
-import { ErrorType, handlePhysicsError } from "../utils/errorHandler";
+import { handlePhysicsError } from "../utils/errorHandler";
 import { useGameStore } from "../stores/gameStore";
 import type { LandingMetrics } from "../stores/gameStore";
 import { ParticleSystem } from "./particleSystem";

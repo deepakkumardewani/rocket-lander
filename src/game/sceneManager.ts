@@ -1,15 +1,15 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
-import { StarField } from "./StarField";
-import { CelestialObjects } from "./CelestialObjects";
-import { ShootingStars } from "./ShootingStars";
-import { Nebula } from "./Nebula";
-import { Aurora } from "./Aurora";
-import { LensFlare } from "./LensFlare";
+import { StarField } from "./space/StarField";
+import { CelestialObjects } from "./space/CelestialObjects";
+import { ShootingStars } from "./space/ShootingStars";
+import { Nebula } from "./space/Nebula";
+import { Aurora } from "./space/Aurora";
+import { LensFlare } from "./space/LensFlare";
 // import { CloudV2 } from "./CloudV2";
-import { Birds } from "./Birds";
-import { Cloud } from "./Clouds";
+import { Birds } from "./sea/Birds";
+import { Cloud } from "./sea/Clouds";
 
 /**
  * Creates and configures the Three.js scene

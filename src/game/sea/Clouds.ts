@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { AssetLoader } from "../utils/assetLoader";
+import { AssetLoader } from "../../utils/assetLoader";
 
 interface CloudScene extends THREE.Scene {
   camera?: THREE.Camera;
