@@ -4,7 +4,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 1: Define Level Configurations
+## Step 1: Define Level Configurations ✅
 
 - **Action:** Create a file to store level configurations for both environments.
 - **Instructions:**
@@ -28,7 +28,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 2: Extend Game Store with Level State
+## Step 2: Extend Game Store with Level State ✅
 
 - **Action:** Update the Pinia store to manage level tracking and completion.
 - **Instructions:**
@@ -42,7 +42,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 3: Load Level Configuration in GameCanvas
+## Step 3: Load Level Configuration in GameCanvas ✅
 
 - **Action:** Retrieve and apply the current level’s configuration.
 - **Instructions:**
@@ -57,7 +57,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 4: Configure Physics with Level Settings
+## Step 4: Configure Physics with Level Settings ✅
 
 - **Action:** Apply level-specific gravity, wind, and wave height to the physics world.
 - **Instructions:**
@@ -74,7 +74,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 5: Set Rocket Fuel per Level
+## Step 5: Set Rocket Fuel per Level ✅
 
 - **Action:** Adjust the rocket’s starting fuel based on the level.
 - **Instructions:**
@@ -83,7 +83,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 6: Adjust Platform Size and Type per Level
+## Step 6: Adjust Platform Size and Type per Level ✅
 
 - **Action:** Configure platform dimensions and type (Platform or BoatPlatform) based on the level.
 - **Instructions:**
@@ -115,7 +115,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 8: Add Obstacles for Specific Levels
+## Step 8: Add Obstacles for Specific Levels ✅
 
 - **Action:** Implement asteroids (Space Level 4) and multiple platforms (Sea Level 4).
 - **Instructions:**
@@ -136,14 +136,14 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ---
 
-## Step 9: Implement Variable Gravity for Space Level 5
+<!-- ## Step 9: Implement Variable Gravity for Space Level 5
 
 - **Action:** Add fluctuating gravity for Space Level 5.
 - **Instructions:**
   - In `src/game/physics.ts`, add a `setVariableGravity(baseGravity: number)` function:
     - Every 5 seconds (track with a timer), set `world.gravity.set(0, baseGravity + (Math.random() * 10 - 5), 0)` (range: -5 to -15 for base -10).
   - In `GameCanvas.vue`, for Space Level 5, call `setVariableGravity(levelConfig.value.gravity)` instead of `setGravity`.
-- **Test:** Start Space Level 5. Confirm gravity changes every 5 seconds (rocket falls faster/slower). Log `world.gravity.y` to verify range (-5 to -15).
+- **Test:** Start Space Level 5. Confirm gravity changes every 5 seconds (rocket falls faster/slower). Log `world.gravity.y` to verify range (-5 to -15). -->
 
 ---
 
@@ -171,21 +171,6 @@ This plan provides step-by-step instructions to implement five levels for both t
     - If failed, keep `isLevelCompleted` as false.
   - Ensure `store.setGameState('landed')` or 'crashed' updates accordingly.
 - **Test:** Land successfully on Space Level 1. Confirm `store.isLevelCompleted` is true. Crash, confirm it remains false.
-
----
-
-## Step 12: Display Level Information in HUD
-
-- **Action:** Show the current level and objectives in the HUD.
-- **Instructions:**
-  - In `src/components/HUD.vue`:
-    - Access `currentLevel`, `selectedEnvironment`, and `levelConfig` from the store or props.
-    - Add a `<div class="text-white absolute top-4 right-4">Level: ${currentLevel}</div>`.
-    - Add a `<div class="text-white absolute top-8 right-4">` with objectives:
-      - Space Level 4: “Avoid asteroids, land on platform”.
-      - Sea Level 4: “Land on the correct platform”.
-      - Others: “Land safely on the ${platformName}”.
-- **Test:** Start Sea Level 4. Confirm HUD shows “Level: 4” and “Land on the correct platform”. Switch to Space Level 1, confirm it shows “Land safely on the Platform”.
 
 ---
 

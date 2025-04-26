@@ -31,7 +31,7 @@ Transform the sea surface into a realistic ocean with dynamic waves, reflections
 
 #### Step 4: Add Normal Mapping for Wave Detail ✅
 
-- In `src/utils/assetLoader.ts`, add a `loadSeaNormalTexture` method to load a normal map texture (`/src/assets/textures/sea_normal.png`).
+- In `src/utils/assetLoader.ts`, add a `loadSeaNormalTexture` method to load a normal map texture (`/src/assets/textures/waternormals.jpg`).
 - If the texture doesn’t exist, create a placeholder normal map using canvas (purple-blue gradient, RGB: 128, 128, 255).
 - In `SeaSurface.ts`, update the fragment shader to use the normal map for lighting calculations.
 - Apply the normal map with a tiling factor of 4x4 to repeat across the surface.
