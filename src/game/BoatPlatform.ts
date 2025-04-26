@@ -8,7 +8,9 @@ import { handleRenderingError } from "../utils/errorHandler";
  */
 interface BoatPlatformParams {
   position?: THREE.Vector3;
-  size?: THREE.Vector3;
+  width?: number;
+  depth?: number;
+  height?: number;
   color?: number;
   texture?: THREE.Texture;
 }
@@ -29,14 +31,16 @@ export class BoatPlatform {
     try {
       // Set default values if not provided
       const position = params.position || new THREE.Vector3(0, 0.5, 0);
-      const size = params.size || new THREE.Vector3(10, 1, 20);
+      const width = params.width || 10;
+      const depth = params.depth || 20;
+      const height = params.height || 1;
       const color = params.color || 0x8b4513; // Wooden brown color
 
       // Create geometry
       const geometry = new THREE.BoxGeometry(
-        size.x, // width
-        size.y, // height
-        size.z // depth
+        width, // width
+        height, // height
+        depth // depth
       );
 
       // Create material
@@ -64,7 +68,7 @@ export class BoatPlatform {
 
       // Create physics body (mass = 0 makes it static)
       const shape = new CANNON.Box(
-        new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)
+        new CANNON.Vec3(width / 2, height / 2, depth / 2)
       );
       this.body = new CANNON.Body({
         mass: 0, // Static body

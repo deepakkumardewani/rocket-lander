@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed } from "vue";
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { SceneManager } from "./sceneManager";
 import { Rocket } from "./Rocket";
 import { Platform } from "./Platform";
 import { BoatPlatform } from "./BoatPlatform";
-import { updatePhysics, syncMeshWithBody, disposePhysics } from "./physics";
+import { Obstacle } from "./Obstacle";
+import {
+  updatePhysics,
+  syncMeshWithBody,
+  disposePhysics,
+  setGravity,
+  setWindStrength,
+} from "./physics";
 import {
   ErrorType,
   handleRenderingError,
@@ -18,18 +25,23 @@ import { useGameStore } from "../stores/gameStore";
 import {
   registerCollisionHandlers,
   getCrashParticles,
+  registerLandingTarget,
 } from "./collisionHandler";
 import { assetLoader, AssetType } from "../utils/assetLoader";
-import HUD from "../components/HUD.vue";
+import HUD from "../components/HUD/HUD.vue";
 import LoadingScreen from "../components/LoadingScreen.vue";
 import EffectsPanel from "../components/EffectsPanel.vue";
 import { Terrain } from "./Terrain";
 import { SeaSurface } from "./SeaSurface";
+import { spaceLevels, seaLevels } from "./levels";
+import type { LevelConfig } from "./levels";
 
 // Define emits
 const emit = defineEmits<{
   (e: "game-end"): void;
 }>();
+
+const gameStore = useGameStore();
 
 // Create refs for the scene elements
 const canvasContainer = ref<HTMLDivElement | null>(null);
@@ -45,6 +57,7 @@ let animationFrameId: number | null = null;
 let cleanupCollisionHandlers: (() => void) | null = null;
 const hudRef = ref<InstanceType<typeof HUD> | null>(null);
 let lastFrameTime = performance.now();
+let frameCount = 0; // Add frame counter for throttling updates
 
 // Camera position storage
 let defaultCameraPosition: THREE.Vector3 | null = null;
@@ -54,44 +67,38 @@ let defaultCameraTarget: THREE.Vector3 | null = null;
 let shootingStarInterval: number | null = null;
 let auroraInterval: number | null = null;
 
-// Watch for hudRef changes to properly connect it to SceneManager
-watch(
-  hudRef,
-  (newHudRef) => {
-    if (newHudRef && sceneManager) {
-      sceneManager.setHUDRef(newHudRef);
-    }
-  },
-  { flush: "post" }
-);
+// Array to store obstacle instances
+let obstacles: Obstacle[] = [];
 
 // Sound state tracking
 let isThrusterSoundPlaying = false;
 let lastRocketVelocityY = 0;
 const LANDING_SOUND_VELOCITY_THRESHOLD = -2; // Velocity threshold to play landing sound
 
-// Get the game store
-const gameStore = useGameStore();
+// Constants for game physics
+const THRUST_FORCE = 15; // Force magnitude for rocket thrust
+const FUEL_CONSUMPTION_RATE = -0.05; // Fuel consumed per frame when thrusting (reduced from -0.5)
+const ROTATION_SPEED = 1; // Angular velocity for rotation (radians/second)
+const ROTATION_DAMPING = 0.95; // Damping factor for rotation
 
-// Watch for game state changes to handle camera controls
-watch(
-  () => gameStore.gameState,
-  (newState, oldState) => {
-    if (!sceneManager) return;
+// Get the current level configuration based on environment and level
+const levelConfig = computed<LevelConfig | null>(() => {
+  const { environment, currentLevel } = gameStore;
 
-    // If transitioning to flying state, reset the camera
-    if (newState === "flying" && oldState !== "flying") {
-      resetCamera();
-
-      // Disable camera controls in flying state
-      sceneManager.controls.enabled = false;
-    }
-    // Re-enable camera controls when not in flying state
-    else if (newState !== "flying") {
-      sceneManager.controls.enabled = true;
-    }
+  console.log("environment", environment);
+  console.log("currentLevel", currentLevel);
+  if (environment === "space") {
+    return (
+      spaceLevels.find((level) => level.levelNumber === currentLevel) || null
+    );
+  } else if (environment === "sea") {
+    return (
+      seaLevels.find((level) => level.levelNumber === currentLevel) || null
+    );
   }
-);
+
+  return null;
+});
 
 // Function to reset camera to default position
 const resetCamera = () => {
@@ -101,7 +108,7 @@ const resetCamera = () => {
   const startPosition = sceneManager.camera.position.clone();
   const startTarget = sceneManager.controls.target.clone();
   const startTime = performance.now();
-  const duration = 1000; // 1 second transition
+  const duration = 2000; // 1 second transition
 
   const animateCameraReset = () => {
     if (!sceneManager || !defaultCameraPosition || !defaultCameraTarget) return;
@@ -141,12 +148,6 @@ const easeOutCubic = (x: number): number => {
   return 1 - Math.pow(1 - x, 3);
 };
 
-// Constants for game physics
-const THRUST_FORCE = 15; // Force magnitude for rocket thrust
-const FUEL_CONSUMPTION_RATE = -0.05; // Fuel consumed per frame when thrusting (reduced from -0.5)
-const ROTATION_SPEED = 1; // Angular velocity for rotation (radians/second)
-const ROTATION_DAMPING = 0.95; // Damping factor for rotation
-
 // Function to load all game assets
 const loadGameAssets = async (): Promise<void> => {
   try {
@@ -154,7 +155,7 @@ const loadGameAssets = async (): Promise<void> => {
     const assetsToLoad = [
       {
         type: AssetType.MODEL,
-        url: "/models/rocket.glb",
+        url: "/src/assets/models/rocket.glb",
         key: "rocket",
       },
       // Add sound effects
@@ -185,9 +186,9 @@ const loadGameAssets = async (): Promise<void> => {
     }
 
     // Set up loading manager progress tracking
-    assetLoader.loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+    assetLoader.loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
       loadingProgress.value = Math.round((itemsLoaded / itemsTotal) * 100);
-      console.log(`Loading: ${loadingProgress.value}% (${url})`);
+      // console.log(`Loading: ${loadingProgress.value}% (${url})`);
     };
 
     // Initialize audio context (must be called after user interaction)
@@ -196,6 +197,15 @@ const loadGameAssets = async (): Promise<void> => {
 
     // Load all assets
     await assetLoader.loadAssets(assetsToLoad);
+
+    // Log level configuration for testing
+    if (levelConfig.value) {
+      console.log(`Loaded level configuration:`, levelConfig.value);
+    } else {
+      console.warn(
+        "No level configuration found for the current environment and level"
+      );
+    }
 
     // Load platform textures
     await assetLoader.loadPlatformTextures();
@@ -224,7 +234,7 @@ const loadGameAssets = async (): Promise<void> => {
 
     // Assets loaded successfully
     isLoading.value = false;
-    console.log("All assets loaded successfully");
+    // console.log("All assets loaded successfully");
 
     // Initialize the game scene with the current texture
     initializeGameScene(
@@ -259,6 +269,18 @@ const initializeGameScene = (
     defaultCameraPosition = sceneManager.camera.position.clone();
     defaultCameraTarget = sceneManager.controls.target.clone();
 
+    // Apply level-specific physics settings if level configuration exists
+    if (levelConfig.value) {
+      // Set gravity from level config
+      setGravity(levelConfig.value.gravity);
+
+      // Set wind strength from level config
+      setWindStrength(levelConfig.value.windStrength);
+
+      // Set fuel from level config (update initial fuel value)
+      gameStore.updateFuel(levelConfig.value.startingFuel - 100); // Adjust from default 100
+    }
+
     // Create skybox based on environment
     if (gameStore.environment === "space") {
       sceneManager.createSkybox(spaceTextures);
@@ -268,7 +290,7 @@ const initializeGameScene = (
 
       // Create a dynamic star field
       sceneManager.createStarField({
-        starCount: 3500,
+        starCount: 800,
         radius: 95,
         minSize: 0.15,
         maxSize: 0.7,
@@ -282,16 +304,16 @@ const initializeGameScene = (
 
       // Create shooting stars system
       sceneManager.createShootingStars({
-        maxShootingStars: 8,
-        maxTrailLength: 25,
-        minSpawnInterval: 4,
-        maxSpawnInterval: 12,
+        maxShootingStars: 3,
+        maxTrailLength: 15,
+        minSpawnInterval: 6,
+        maxSpawnInterval: 15,
         texture: starTexture,
       });
 
       // Create nebula effect
       sceneManager.createNebula({
-        planeCount: 5,
+        planeCount: 3,
         planeSize: 120,
         opacity: 0.15,
         distribution: 60,
@@ -314,19 +336,18 @@ const initializeGameScene = (
       sceneManager.createLensFlare({
         sourcePosition: new THREE.Vector3(40, 25, -70),
         flareColor: new THREE.Color(0xffffcc), // Warm yellow
-        size: 15,
-        intensity: 0.8,
+        size: 12, // Reduced from 15
+        intensity: 0.5, // Reduced from 0.8
       });
 
       // Create and add the terrain
       terrain = new Terrain();
       sceneManager.scene.add(terrain.getMesh());
-      // The terrain body is already added to the world in the Terrain constructor
-      console.log("Terrain added to scene");
 
-      // Create and add the space platform with the selected texture
       platform = new Platform({
-        texture: currentTexture, // Use the currentTexture
+        width: levelConfig.value?.platformWidth || 5,
+        depth: levelConfig.value?.platformDepth || 5,
+        texture: currentTexture,
       });
       platform.addToScene(sceneManager.scene);
     } else if (gameStore.environment === "sea") {
@@ -363,24 +384,23 @@ const initializeGameScene = (
 
       // Create and add the boat platform with the selected texture
       boatPlatform = new BoatPlatform({
+        width: levelConfig.value?.platformWidth || 10,
+        depth: levelConfig.value?.platformDepth || 20,
         texture: boatTexture || currentTexture,
       });
       boatPlatform.addToScene(sceneManager.scene);
-      console.log("Boat platform added to scene");
 
       // Create cloud system with reference implementation parameters
       sceneManager.createClouds({
-        count: 50, // More clouds for better coverage
+        count: 20, // Reduced from 50 to 20 clouds
         boundary: 4000, // Match reference boundary
       });
-      console.log("Cloud system added to scene");
 
       // Create birds system
       sceneManager.createBirds({
-        flockCount: 4, // Create 4 flocks of birds
+        flockCount: 2,
         birdHeight: 60, // Birds fly at 60 units height above sea level
       });
-      console.log("Bird flocks added to scene");
 
       // Create a cube camera for reflections
       const cubeRenderTarget = sceneManager.createCubeCamera(
@@ -405,9 +425,13 @@ const initializeGameScene = (
 
       sceneManager.scene.add(seaSurface.getMesh());
 
+      // Set wave height from level config if in sea environment
+      if (levelConfig.value && levelConfig.value.waveHeight && seaSurface) {
+        seaSurface.setWaveHeight(levelConfig.value.waveHeight);
+      }
+
       // Create optional grid on the water for better visual reference
       seaSurface.createGrid(true);
-      console.log("Enhanced sea surface with reflections added to scene");
 
       // Adjust camera position for better sea view
       sceneManager.camera.position.set(0, 25, 45);
@@ -423,6 +447,11 @@ const initializeGameScene = (
       rocket.getBody().type = CANNON.Body.STATIC;
     }
 
+    // Create obstacles based on level configuration
+    if (levelConfig.value?.obstacles) {
+      createObstacles(levelConfig.value.obstacles);
+    }
+
     // Set up collision detection between rocket and platform
     if (rocket) {
       if (gameStore.environment === "space" && platform) {
@@ -432,12 +461,11 @@ const initializeGameScene = (
           // Add callback for successful landing
           () => {
             // Play landing sound when successfully landed
-            // assetLoader.playAudio("rocket-landing", false, 0.7);
+            assetLoader.playAudio("rocket-landing", false, 0.7);
           },
           // Add callback for crash
           () => {
             // Play explosion sound when crashed
-            console.log("Playing explosion sound");
             assetLoader.playAudio("missile-explosion", false, 0.8);
           }
         );
@@ -459,7 +487,6 @@ const initializeGameScene = (
           // Add callback for crash
           () => {
             // Play explosion sound when crashed
-            console.log("Playing explosion sound");
             assetLoader.playAudio("missile-explosion", false, 0.8);
           }
         );
@@ -480,7 +507,6 @@ const initializeGameScene = (
         undefined, // No successful landing on terrain
         () => {
           // Play explosion sound when crashing into terrain
-          console.log("Rocket crashed into terrain");
           assetLoader.playAudio("missile-explosion", false, 0.8);
         }
       );
@@ -522,6 +548,27 @@ const initializeGameScene = (
       }
     );
 
+    // Fix the shouldResetRocket flag access through the store
+    watch(
+      () => gameStore.shouldResetRocket,
+      (shouldReset) => {
+        if (shouldReset && rocket) {
+          // Reset rocket position and orientation
+          const rocketBody = rocket.getBody();
+          rocketBody.position.set(0, 15, 0); // Match the new starting height
+          rocketBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0);
+          rocketBody.velocity.set(0, 0, 0);
+          rocketBody.angularVelocity.set(0, 0, 0);
+
+          // Set rocket to static body type in waiting state
+          rocketBody.type = CANNON.Body.STATIC;
+
+          // Reset the flag after handling it
+          gameStore.setResetRocketFlag(false);
+        }
+      }
+    );
+
     // Animation loop
     const animate = withErrorHandling(
       () => {
@@ -535,7 +582,10 @@ const initializeGameScene = (
         // Limit delta time to avoid large jumps during tab switches or low FPS
         const clampedDeltaTime = Math.min(deltaTime, 0.1);
 
-        // Update physics world
+        // Increment frame counter
+        frameCount++;
+
+        // Update physics world - using original interface to avoid errors
         updatePhysics(clampedDeltaTime);
 
         // Sync the rocket mesh with its physics body
@@ -543,10 +593,12 @@ const initializeGameScene = (
           syncMeshWithBody(rocket.getMesh(), rocket.getBody());
         }
 
-        // Update sea surface if in sea environment
+        // Update sea surface if in sea environment - reduce update frequency
         if (gameStore.environment === "sea" && seaSurface) {
-          // Update reflections before updating the sea surface
-          if (sceneManager) {
+          // Only update reflections every few frames
+          const shouldUpdateReflections = frameCount % 3 === 0;
+
+          if (shouldUpdateReflections && sceneManager) {
             sceneManager.updateCubeCamera();
           }
           seaSurface.update(clampedDeltaTime);
@@ -770,19 +822,19 @@ const initializeGameScene = (
 
     // Create environment-specific special effects
     if (gameStore.environment === "space") {
-      // Trigger shooting star every 5 seconds
+      // Trigger shooting star every 8 seconds instead of 5
       shootingStarInterval = window.setInterval(() => {
         if (sceneManager) {
           sceneManager.triggerShootingStar();
         }
-      }, 5000);
+      }, 8000);
 
-      // Aurora effect that pulses every 30 seconds
+      // Aurora effect that pulses every 45 seconds instead of 30
       auroraInterval = window.setInterval(() => {
         if (sceneManager) {
           sceneManager.triggerAurora(0.8, 5); // 0.8 intensity for 5 seconds
         }
-      }, 30000);
+      }, 45000);
     } else if (gameStore.environment === "sea") {
       // Play sea waves ambient sound
       assetLoader.playAudio("sea-waves", true, 0.3); // Loop sound at 30% volume
@@ -795,8 +847,288 @@ const initializeGameScene = (
   }
 };
 
+/**
+ * Creates obstacles based on level configuration
+ * @param obstacleConfig Obstacle configuration from the level
+ */
+const createObstacles = (obstacleConfig: {
+  type: "asteroid" | "platform";
+  count: number;
+  size: number;
+}) => {
+  if (!sceneManager) return;
+
+  // Clear existing obstacles
+  disposeObstacles();
+
+  // Create new obstacles based on type
+  const { type, count, size } = obstacleConfig;
+  const isSpaceLevel4 =
+    gameStore.environment === "space" && gameStore.currentLevel === 4;
+  const isSeaLevel4 =
+    gameStore.environment === "sea" && gameStore.currentLevel === 4;
+
+  for (let i = 0; i < count; i++) {
+    // Generate random position
+    let position: THREE.Vector3;
+
+    if (type === "asteroid" && isSpaceLevel4) {
+      // For space asteroids, position them in a ring around the landing zone
+      const radius = 20 + Math.random() * 10; // 20-30 units from center
+      const angle = Math.random() * Math.PI * 2; // Random angle
+      const height = 5 + Math.random() * 15; // 5-20 units high
+      position = new THREE.Vector3(
+        Math.sin(angle) * radius,
+        height,
+        Math.cos(angle) * radius
+      );
+    } else if (type === "platform" && isSeaLevel4) {
+      // For sea platforms, position them around the scene
+      position = new THREE.Vector3(
+        -15 + Math.random() * 30, // -15 to 15 on x axis
+        2, // slightly above water
+        -15 + Math.random() * 30 // -15 to 15 on z axis
+      );
+
+      // Mark one platform as the target (first one created)
+      const isTarget = i === 0;
+
+      // Create the obstacle
+      const obstacle = new Obstacle(type, size, position, isTarget);
+
+      // Add to scene
+      sceneManager.scene.add(obstacle.getMesh());
+
+      // Add to physics world
+      if (obstacle.getBody()) {
+        // Update world physics
+        updatePhysics(0);
+
+        // If it's the target platform, register it for collision detection
+        if (isTarget) {
+          registerLandingTarget(obstacle.getBody(), true);
+        } else {
+          // Register as landing target but not primary (will cause crash)
+          registerLandingTarget(obstacle.getBody(), false);
+        }
+      }
+
+      // Add to obstacles array
+      obstacles.push(obstacle);
+
+      continue; // Skip the rest for platforms
+    } else {
+      // Default positioning for any other obstacle type
+      position = new THREE.Vector3(
+        -20 + Math.random() * 40, // -20 to 20 on x axis
+        5 + Math.random() * 10, // 5 to 15 on y axis
+        -20 + Math.random() * 40 // -20 to 20 on z axis
+      );
+    }
+
+    // Create the obstacle
+    const obstacle = new Obstacle(type, size, position);
+
+    // Add to scene
+    sceneManager.scene.add(obstacle.getMesh());
+
+    // Add to physics world
+    if (obstacle.getBody()) {
+      // Update world physics
+      updatePhysics(0);
+    }
+
+    // Add to obstacles array
+    obstacles.push(obstacle);
+
+    // Register collision handling for this obstacle with the rocket
+    if (rocket) {
+      const obstacleCleanup = registerCollisionHandlers(
+        rocket.getBody(),
+        obstacle.getBody(),
+        undefined, // No successful landing on asteroids
+        () => {
+          // Play explosion sound when crashing into obstacle
+          assetLoader.playAudio("missile-explosion", false, 0.8);
+        }
+      );
+
+      // Store cleanup function
+      const previousCleanup = cleanupCollisionHandlers;
+      cleanupCollisionHandlers = () => {
+        if (previousCleanup) previousCleanup();
+        obstacleCleanup();
+      };
+    }
+  }
+};
+
+/**
+ * Dispose of all obstacles
+ */
+const disposeObstacles = () => {
+  obstacles.forEach((obstacle) => {
+    if (sceneManager) {
+      sceneManager.scene.remove(obstacle.getMesh());
+    }
+    obstacle.dispose();
+  });
+
+  // Clear the obstacles array
+  obstacles = [];
+};
+
+// Watch for hudRef changes to properly connect it to SceneManager
+watch(
+  hudRef,
+  (newHudRef) => {
+    if (newHudRef && sceneManager) {
+      sceneManager.setHUDRef(newHudRef);
+    }
+  },
+  { flush: "post" }
+);
+
+// Watch for game state changes to handle camera controls
+watch(
+  () => gameStore.gameState,
+  (newState, oldState) => {
+    if (!sceneManager) return;
+
+    // If transitioning to flying state, reset the camera
+    if (newState === "flying" && oldState !== "flying") {
+      resetCamera();
+
+      // Disable camera controls in flying state
+      sceneManager.controls.enabled = false;
+    }
+    // Re-enable camera controls when not in flying state
+    else if (newState !== "flying") {
+      sceneManager.controls.enabled = true;
+    }
+  }
+);
+
+// Add a watch for level changes to update platform and physics
+watch(
+  () => gameStore.currentLevel,
+  (newLevel, oldLevel) => {
+    if (newLevel !== oldLevel && levelConfig.value) {
+      // Update physics settings based on new level
+      if (levelConfig.value.gravity) {
+        setGravity(levelConfig.value.gravity);
+      }
+
+      if (levelConfig.value.windStrength) {
+        setWindStrength(levelConfig.value.windStrength);
+      }
+
+      // Update platform size based on new level
+      if (gameStore.environment === "space" && platform) {
+        // Remove existing platform
+        if (sceneManager?.scene) {
+          platform.removeFromScene(sceneManager.scene);
+        }
+        platform.dispose();
+
+        // Create new platform with updated dimensions
+        const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
+        platform = new Platform({
+          width: levelConfig.value?.platformWidth || 5,
+          depth: levelConfig.value?.platformDepth || 5,
+          texture: currentTexture,
+        });
+
+        if (sceneManager) {
+          platform.addToScene(sceneManager.scene);
+        }
+
+        // Reset collision handlers
+        if (rocket && cleanupCollisionHandlers) {
+          cleanupCollisionHandlers();
+
+          cleanupCollisionHandlers = registerCollisionHandlers(
+            rocket.getBody(),
+            platform.getBody(),
+            // Add callback for successful landing
+            () => {
+              // Play landing sound when successfully landed
+              assetLoader.playAudio("rocket-landing", false, 0.7);
+            },
+            // Add callback for crash
+            () => {
+              assetLoader.playAudio("missile-explosion", false, 0.8);
+            }
+          );
+
+          // Add crash particles to the scene
+          const crashParticles = getCrashParticles();
+          if (crashParticles && sceneManager) {
+            sceneManager.scene.add(crashParticles.getMesh());
+          }
+        }
+      } else if (gameStore.environment === "sea" && boatPlatform) {
+        // Update boat platform for sea levels
+        if (sceneManager?.scene) {
+          boatPlatform.removeFromScene(sceneManager.scene);
+        }
+        boatPlatform.dispose();
+
+        // Create new boat platform with updated dimensions
+        const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
+        boatPlatform = new BoatPlatform({
+          width: levelConfig.value?.platformWidth || 10,
+          depth: levelConfig.value?.platformDepth || 20,
+          texture: currentTexture,
+        });
+
+        if (sceneManager) {
+          boatPlatform.addToScene(sceneManager.scene);
+        }
+
+        // Update sea wave height if applicable
+        if (seaSurface && levelConfig.value.waveHeight) {
+          seaSurface.setWaveHeight(levelConfig.value.waveHeight);
+        }
+
+        // Reset collision handlers
+        if (rocket && cleanupCollisionHandlers) {
+          cleanupCollisionHandlers();
+
+          cleanupCollisionHandlers = registerCollisionHandlers(
+            rocket.getBody(),
+            boatPlatform.getBody(),
+            // Add callback for successful landing
+            () => {
+              // Play landing sound when successfully landed
+              assetLoader.playAudio("rocket-landing", false, 0.7);
+            },
+            // Add callback for crash
+            () => {
+              assetLoader.playAudio("missile-explosion", false, 0.8);
+            }
+          );
+
+          // Add crash particles to the scene
+          const crashParticles = getCrashParticles();
+          if (crashParticles && sceneManager) {
+            sceneManager.scene.add(crashParticles.getMesh());
+          }
+        }
+      }
+
+      // Update obstacles based on new level configuration
+      if (levelConfig.value.obstacles) {
+        disposeObstacles();
+        createObstacles(levelConfig.value.obstacles);
+      }
+    }
+  }
+);
+
 // Start loading process when the component is mounted
 onMounted(() => {
+  gameStore.setCurrentLevel(1);
   loadGameAssets();
 });
 
@@ -875,6 +1207,9 @@ onUnmounted(() => {
     assetLoader.stopAudio("sea-waves");
     assetLoader.dispose();
   }
+
+  // Clean up obstacles
+  disposeObstacles();
 
   // Emit game end event
   emit("game-end");

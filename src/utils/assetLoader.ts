@@ -70,10 +70,10 @@ export class AssetLoader {
   // Set up the loading manager with progress and error handlers
   private setupLoadingManager(): void {
     // Track overall loading progress
-    this.loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
-      const progress = Math.round((itemsLoaded / itemsTotal) * 100);
-      console.log(`Loading: ${progress}% (${url})`);
-    };
+    // this.loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
+    //   // const progress = Math.round((itemsLoaded / itemsTotal) * 100);
+    //   // console.log(`Loading: ${progress}% (${url})`);
+    // };
 
     // Handle loading errors
     this.loadingManager.onError = (url) => {
@@ -150,12 +150,6 @@ export class AssetLoader {
               throw new Error("Model scene is empty");
             }
 
-            // Log model information for debugging
-            console.log(`Model loaded: ${key}`, {
-              children: model.children.length,
-              animations: gltf.animations?.length || 0,
-            });
-
             this.models.set(key, model);
             resolve({
               key,
@@ -172,14 +166,13 @@ export class AssetLoader {
             reject(error);
           }
         },
-        (progress) => {
-          // Log loading progress
-          if (progress.lengthComputable) {
-            const percentComplete = (progress.loaded / progress.total) * 100;
-            console.log(
-              `Loading model ${key}: ${Math.round(percentComplete)}%`
-            );
-          }
+        (_) => {
+          // if (progress.lengthComputable) {
+          //   const percentComplete = (progress.loaded / progress.total) * 100;
+          //   console.log(
+          //     `Loading model ${key}: ${Math.round(percentComplete)}%`
+          //   );
+          // }
         },
         (err: unknown) => {
           const errorMessage = `Failed to load model ${key} from ${url}: ${
@@ -465,7 +458,7 @@ export class AssetLoader {
         "/src/assets/textures/platform/gold.png",
         "/src/assets/textures/platform/neon.png",
         "/src/assets/textures/platform/night_sky.png",
-        "/src/assets/textures/platform/platform_1.jpg",
+        "/src/assets/textures/platform/platform_1.png",
       ];
 
       const platformTextures = await Promise.all(
@@ -681,7 +674,7 @@ export class AssetLoader {
 
   /**
    * Load or generate a cloud texture
-   * Uses an existing cloud.png or generates a procedural one
+   * Uses an existing cloud.avif or generates a procedural one
    * @returns Promise for the loaded cloud texture
    */
   async loadCloudTexture(): Promise<THREE.Texture> {
@@ -709,78 +702,6 @@ export class AssetLoader {
       throw error;
     }
   }
-
-  /**
-   * Generates a procedural cloud texture
-   * @returns Procedural cloud texture
-   */
-  // private generateProceduralCloudTexture(): THREE.Texture {
-  //   const size = 256;
-  //   const canvas = document.createElement("canvas");
-  //   canvas.width = size;
-  //   canvas.height = size;
-  //   const ctx = canvas.getContext("2d")!;
-
-  //   // Fill with transparent background
-  //   ctx.fillStyle = "rgba(0,0,0,0)";
-  //   ctx.fillRect(0, 0, size, size);
-
-  //   // Helper function for Perlin-like noise (simplified)
-  //   const noise = (x: number, y: number) => {
-  //     return Math.sin(x * 0.1) * Math.sin(y * 0.1) * 0.5 + 0.5;
-  //   };
-
-  //   // Draw multiple noise layers for fluffy look
-  //   for (let i = 0; i < 5; i++) {
-  //     const offsetX = Math.random() * size * 0.2;
-  //     const offsetY = Math.random() * size * 0.2;
-  //     const scale = 0.5 + Math.random() * 0.5;
-
-  //     // Draw noise blob
-  //     for (let x = 0; x < size; x++) {
-  //       for (let y = 0; y < size; y++) {
-  //         // Calculate distance from center for circular gradient
-  //         const dx = x - size / 2;
-  //         const dy = y - size / 2;
-  //         const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
-
-  //         // Create noise value
-  //         const noiseVal = noise((x + offsetX) * scale, (y + offsetY) * scale);
-
-  //         // Create radial gradient that fades at the edges
-  //         const edgeFade = Math.max(0, 1 - distFromCenter);
-  //         const alpha = noiseVal * edgeFade * edgeFade * 0.2; // Lower alpha for layering
-
-  //         // Use slightly varied white for depth
-  //         const colorVal = 220 + noiseVal * 35;
-
-  //         ctx.fillStyle = `rgba(${colorVal},${colorVal},${colorVal},${alpha})`;
-  //         ctx.fillRect(x, y, 1, 1);
-  //       }
-  //     }
-  //   }
-
-  //   // Add central density
-  //   for (let x = 0; x < size; x++) {
-  //     for (let y = 0; y < size; y++) {
-  //       const dx = x - size / 2;
-  //       const dy = y - size / 2;
-  //       const distFromCenter = Math.sqrt(dx * dx + dy * dy) / (size / 2);
-
-  //       if (distFromCenter < 0.5) {
-  //         const alpha = (1 - distFromCenter * 2) * 0.3;
-  //         ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-  //         ctx.fillRect(x, y, 1, 1);
-  //       }
-  //     }
-  //   }
-
-  //   // Create texture from canvas
-  //   const texture = new THREE.CanvasTexture(canvas);
-  //   texture.wrapS = THREE.ClampToEdgeWrapping;
-  //   texture.wrapT = THREE.ClampToEdgeWrapping;
-  //   return texture;
-  // }
 }
 
 // Create and export a singleton instance for use throughout the app

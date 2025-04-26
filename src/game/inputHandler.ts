@@ -1,4 +1,4 @@
-import { ErrorType, handleInputError } from "../utils/errorHandler";
+import { handleInputError } from "../utils/errorHandler";
 
 /**
  * InputHandler class for managing keyboard input in the game

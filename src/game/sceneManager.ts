@@ -7,8 +7,9 @@ import { ShootingStars } from "./ShootingStars";
 import { Nebula } from "./Nebula";
 import { Aurora } from "./Aurora";
 import { LensFlare } from "./LensFlare";
-import { Cloud } from "./Clouds";
+// import { CloudV2 } from "./CloudV2";
 import { Birds } from "./Birds";
+import { Cloud } from "./Clouds";
 
 /**
  * Creates and configures the Three.js scene
@@ -140,7 +141,6 @@ export class SceneManager {
     lastTime: 0,
     value: 0,
   };
-  private isPerformanceMode: boolean = false;
   private effectsIntensity: number = 1.0;
   private cubeCamera: THREE.CubeCamera | null = null;
   private cubeRenderTarget: THREE.WebGLCubeRenderTarget | null = null;
@@ -186,16 +186,8 @@ export class SceneManager {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // Set pixel ratio based on device for better performance
-    if (
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      )
-    ) {
-      this.renderer.setPixelRatio(1.0);
-    } else {
-      this.renderer.setPixelRatio(window.devicePixelRatio);
-    }
+    // Set high quality pixel ratio
+    this.renderer.setPixelRatio(window.devicePixelRatio);
 
     this.camera.position.set(0, 20, 30);
     this.camera.lookAt(0, 0, 0);
@@ -338,7 +330,7 @@ export class SceneManager {
     this.starField = new StarField(options);
     this.scene.add(this.starField.getMesh());
 
-    console.log("Created star field", options);
+    // console.log("Created star field", options);
   }
 
   /**
@@ -369,7 +361,7 @@ export class SceneManager {
     planets.forEach((planet) => this.scene.add(planet));
     glowMeshes.forEach((glow) => this.scene.add(glow));
 
-    console.log("Created celestial objects");
+    // console.log("Created celestial objects");
   }
 
   /**
@@ -394,7 +386,7 @@ export class SceneManager {
     this.shootingStars = new ShootingStars(options);
     this.scene.add(this.shootingStars.getMesh());
 
-    console.log("Created shooting stars", options);
+    // console.log("Created shooting stars", options);
   }
 
   public createNebula(options?: {
@@ -416,7 +408,7 @@ export class SceneManager {
     this.nebula = new Nebula(options);
     this.scene.add(this.nebula.getMesh());
 
-    console.log("Created nebula effect", options);
+    // console.log("Created nebula effect", options);
   }
 
   public createAurora(options?: {
@@ -436,7 +428,7 @@ export class SceneManager {
     this.aurora = new Aurora(options);
     this.scene.add(this.aurora.getMesh());
 
-    console.log("Created aurora effect", options);
+    // console.log("Created aurora effect", options);
   }
 
   public createLensFlare(options: {
@@ -460,7 +452,7 @@ export class SceneManager {
     });
     this.scene.add(this.lensFlare.getMesh());
 
-    console.log("Created lens flare effect", options);
+    // console.log("Created lens flare effect", options);
   }
 
   public triggerAurora(intensity: number = 1.0, duration: number = 0): void {
@@ -520,117 +512,13 @@ export class SceneManager {
       // Adjust star brightness
       this.starField.setIntensity(this.effectsIntensity);
     }
-  }
 
-  /**
-   * Enable/disable performance mode with reduced visual effects
-   * @param enabled Whether performance mode should be enabled
-   */
-  public setPerformanceMode(enabled: boolean): void {
-    this.isPerformanceMode = enabled;
-
-    if (enabled) {
-      // Reduce effects to improve performance
-      this.setEffectsIntensity(0.5);
-
-      // Reduce or disable more expensive effects
-      if (this.nebula) {
-        this.nebula.getMesh().visible = false;
-      }
-
-      if (this.starField) {
-        this.starField.setQuality("low");
-      }
-    } else {
-      // Restore normal effects
-      this.setEffectsIntensity(1.0);
-
-      if (this.nebula) {
-        this.nebula.getMesh().visible = true;
-      }
-
-      if (this.starField) {
-        this.starField.setQuality("high");
-      }
+    // Make sure clouds are always visible at full intensity
+    if (this.clouds) {
+      this.clouds.forEach((cloud) => {
+        cloud.setVisible(true);
+      });
     }
-  }
-
-  /**
-   * Toggle individual effects on/off for gameplay balance
-   * @param effect The effect to toggle
-   * @param enabled Whether the effect should be enabled
-   */
-  public toggleEffect(
-    effect:
-      | "nebula"
-      | "aurora"
-      | "lensFlare"
-      | "shootingStars"
-      | "starField"
-      | "clouds"
-      | "birds",
-    enabled: boolean
-  ): void {
-    switch (effect) {
-      case "nebula":
-        if (this.nebula) {
-          this.nebula.getMesh().visible = enabled;
-        }
-        break;
-      case "aurora":
-        if (this.aurora) {
-          if (enabled) {
-            this.aurora.trigger(this.effectsIntensity);
-          } else {
-            this.aurora.hide();
-          }
-        }
-        break;
-      case "lensFlare":
-        if (this.lensFlare) {
-          this.lensFlare.getMesh().visible = enabled;
-        }
-        break;
-      case "shootingStars":
-        if (this.shootingStars) {
-          this.shootingStars.setEnabled(enabled);
-        }
-        break;
-      case "starField":
-        if (this.starField) {
-          this.starField.getMesh().visible = enabled;
-        }
-        break;
-      case "clouds":
-        if (this.clouds) {
-          this.clouds.forEach((cloud) => cloud.setVisible(enabled));
-        }
-        break;
-      case "birds":
-        if (this.birds) {
-          this.birds.getGroup().visible = enabled;
-        }
-        break;
-    }
-  }
-
-  /**
-   * Measure and get the current FPS
-   * @returns The current frames per second
-   */
-  public getFPS(): number {
-    return this.fpsCounter.value;
-  }
-
-  /**
-   * Get performance status to determine if effects should be reduced
-   * @returns Object with performance metrics
-   */
-  public getPerformanceStatus(): { fps: number; isLow: boolean } {
-    return {
-      fps: this.fpsCounter.value,
-      isLow: this.fpsCounter.value < 30,
-    };
   }
 
   /**
@@ -644,19 +532,22 @@ export class SceneManager {
       this.clouds = null;
     }
 
-    // Skip creating clouds if in performance mode with low effects intensity
-    if (this.isPerformanceMode && this.effectsIntensity < 0.5) {
-      return;
-    }
-
-    // Create new clouds with the camera reference
     this.clouds = Cloud.createClouds(
       this.scene,
       options?.boundary || 4000,
       options?.count || 50
     );
 
-    console.log("Created cloud system");
+    // Create new clouds with the camera reference
+    // this.clouds = Array.from({ length: options?.count || 50 }, () => {
+    //   const cloud = new CloudV2(this.scene, {
+    //     boundary: options?.boundary || 4000,
+    //     camera: this.camera,
+    //   });
+    //   return cloud;
+    // });
+
+    // console.log("Created cloud system");
   }
 
   /**
@@ -667,13 +558,13 @@ export class SceneManager {
    */
   public createCubeCamera(
     position: THREE.Vector3 = new THREE.Vector3(0, 5, 0),
-    resolution: number = 256
+    resolution: number = 512
   ): THREE.WebGLCubeRenderTarget | null {
     try {
       // Clean up any existing cube camera first
       this.disposeCubeCamera();
 
-      // Create a cube render target with mipmaps to reduce aliasing
+      // Create a cube render target with mipmaps for high quality
       this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(resolution, {
         format: THREE.RGBAFormat,
         generateMipmaps: true,
@@ -704,17 +595,17 @@ export class SceneManager {
     if (!this.cubeCamera || !this.cubeRenderTarget) return;
 
     // Hide any objects you don't want in the reflection
-    // For example, you might want to hide the object that will use the reflection texture
     const seaSurface = this.scene.getObjectByName("seaSurface");
     if (seaSurface) seaSurface.visible = false;
 
-    // Also temporarily increase the intensity of lights for better reflections
+    // Full quality update with light adjustments
     const ambientLights = this.scene.children.filter(
       (child) => child instanceof THREE.AmbientLight
     ) as THREE.AmbientLight[];
     const directionalLights = this.scene.children.filter(
       (child) => child instanceof THREE.DirectionalLight
     ) as THREE.DirectionalLight[];
+
     const originalAmbientIntensities = ambientLights.map(
       (light) => light.intensity
     );
@@ -795,7 +686,7 @@ export class SceneManager {
       azimuth: options.azimuth ?? 90,
     });
 
-    console.log("Created dynamic sky with atmospheric scattering");
+    // console.log("Created dynamic sky with atmospheric scattering");
   }
 
   /**
@@ -858,11 +749,6 @@ export class SceneManager {
       this.birds = null;
     }
 
-    // Skip creating birds if in performance mode with low effects intensity
-    if (this.isPerformanceMode && this.effectsIntensity < 0.5) {
-      return;
-    }
-
     // Create birds with wind direction based on sunPosition
     const windDirection = new THREE.Vector3(
       -this.sunPosition.x,
@@ -870,19 +756,14 @@ export class SceneManager {
       -this.sunPosition.z
     ).normalize();
 
-    // Configure birds with performance-appropriate settings
-    const flockCount = this.isPerformanceMode
-      ? 2 // Fewer flocks in performance mode
-      : Math.round((options?.flockCount || 3) * this.effectsIntensity);
-
     // Create new birds
     this.birds = Birds.createBirds(this.scene, {
-      flockCount: flockCount,
+      flockCount: options?.flockCount || 3,
       birdHeight: options?.birdHeight || 50,
       direction: options?.direction || windDirection,
     });
 
-    console.log("Created birds effect", { flockCount, windDirection });
+    // console.log("Created birds effect", { flockCount, windDirection });
   }
 
   /**
@@ -901,57 +782,49 @@ export class SceneManager {
       this.fpsCounter.value = this.fpsCounter.count;
       this.fpsCounter.count = 0;
       this.fpsCounter.lastTime = currentTime;
-
-      // Auto-adjust performance mode if FPS drops significantly
-      if (this.fpsCounter.value < 25 && !this.isPerformanceMode) {
-        console.warn(
-          `FPS dropped to ${this.fpsCounter.value}, enabling performance mode`
-        );
-        this.setPerformanceMode(true);
-      } else if (this.fpsCounter.value > 50 && this.isPerformanceMode) {
-        console.log(
-          `FPS restored to ${this.fpsCounter.value}, disabling performance mode`
-        );
-        this.setPerformanceMode(false);
-      }
     }
 
-    // Update controls if needed
+    // Always update controls
     if (this.controls) {
       this.controls.update();
     }
 
-    // Update starfield if active
+    // Update starfield every frame
     if (this.starField) {
       this.starField.update(deltaTime);
     }
 
-    // Update celestial objects if active
+    // Update celestial objects
     if (this.celestialObjects) {
       this.celestialObjects.update(deltaTime);
     }
 
-    // Update shooting stars if active
+    // Update shooting stars
     if (this.shootingStars) {
       this.shootingStars.update(deltaTime);
     }
 
-    // Update nebula if active
+    // Update nebula
     if (this.nebula) {
       this.nebula.update(deltaTime);
     }
 
-    // Update aurora if active
+    // Update aurora
     if (this.aurora) {
       this.aurora.update(deltaTime);
     }
 
-    // Update lens flare if active
+    // Update lens flare
     if (this.lensFlare) {
       this.lensFlare.update(deltaTime);
     }
 
-    // Update clouds if active
+    // Update birds
+    if (this.birds) {
+      this.birds.update(deltaTime);
+    }
+
+    // Update clouds every frame
     if (this.clouds) {
       const windDirection = new THREE.Vector3(
         -this.sunPosition.x,
@@ -960,16 +833,11 @@ export class SceneManager {
       ).normalize();
 
       this.clouds.forEach((cloud) => {
-        cloud.update(windDirection, delta);
+        cloud.update(windDirection, deltaTime);
       });
     }
 
-    // Update birds if active
-    if (this.birds) {
-      this.birds.update(deltaTime);
-    }
-
-    // Update cube camera for sea reflections if it exists
+    // Update cube camera for sea reflections
     if (this.cubeCamera && this.cubeRenderTarget) {
       this.updateCubeCamera();
     }
@@ -1065,16 +933,8 @@ export class SceneManager {
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-      // Maintain pixel ratio settings on resize
-      if (
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-          navigator.userAgent
-        )
-      ) {
-        this.renderer.setPixelRatio(1.0);
-      } else {
-        this.renderer.setPixelRatio(window.devicePixelRatio);
-      }
+      // Always use high quality pixel ratio
+      this.renderer.setPixelRatio(window.devicePixelRatio);
     }
   };
 

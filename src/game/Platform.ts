@@ -8,7 +8,9 @@ import { handleRenderingError } from "../utils/errorHandler";
  */
 interface PlatformParams {
   position?: THREE.Vector3;
-  size?: THREE.Vector3;
+  width?: number;
+  depth?: number;
+  height?: number;
   color?: number;
   texture?: THREE.Texture;
 }
@@ -29,14 +31,16 @@ export class Platform {
     try {
       // Set default values if not provided
       const position = params.position || new THREE.Vector3(0, 0, 0);
-      const size = params.size || new THREE.Vector3(5, 0.5, 5);
+      const width = params.width || 5;
+      const depth = params.depth || 5;
+      const height = params.height || 1;
       const color = params.color;
 
       // Create geometry
       const geometry = new THREE.BoxGeometry(
-        size.x, // width
-        size.y, // height
-        size.z // depth
+        width, // width
+        height, // height
+        depth // depth
       );
 
       // Create material
@@ -66,7 +70,7 @@ export class Platform {
 
       // Create physics body (mass = 0 makes it static)
       const shape = new CANNON.Box(
-        new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)
+        new CANNON.Vec3(width / 2, height / 2, depth / 2)
       );
       this.body = new CANNON.Body({
         mass: 0, // Static body

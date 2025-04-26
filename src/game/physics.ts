@@ -16,12 +16,89 @@ try {
 world.defaultContactMaterial.contactEquationStiffness = 1e6;
 world.defaultContactMaterial.contactEquationRelaxation = 3;
 
+// Wind strength for environment effects (0 = no wind)
+export let windStrength: number = 0;
+
+// Current wind direction vector (normalized)
+const currentWindDirection = new CANNON.Vec3(1, 0, 0);
+// Time until next wind change
+let windChangeTime = 0;
+// How often the wind changes direction (in seconds)
+const WIND_CHANGE_INTERVAL = 3;
+// How quickly the wind transitions to new direction (0-1, higher = faster)
+const WIND_CHANGE_SPEED = 0.05;
+// Target wind direction for smooth transitions
+let targetWindDirection = new CANNON.Vec3(1, 0, 0);
+
+/**
+ * Set the gravity for the physics world
+ * @param gravity Gravity value along Y axis (negative for downward)
+ */
+export function setGravity(gravity: number): void {
+  world.gravity.set(0, gravity, 0);
+}
+
+/**
+ * Set the wind strength for the environment
+ * @param strength Wind strength value (0 = no wind)
+ */
+export function setWindStrength(strength: number): void {
+  windStrength = strength;
+}
+
 /**
  * Update the physics simulation by one time step
  * @param timeStep Time step in seconds (default: 1/60)
  */
 export function updatePhysics(timeStep = 1 / 60): void {
   try {
+    // Apply wind effects to dynamic bodies if wind strength > 0
+    if (windStrength > 0) {
+      // Update wind direction periodically
+      windChangeTime -= timeStep;
+      if (windChangeTime <= 0) {
+        // Set new target wind direction
+        const randomX = (Math.random() - 0.5) * 2;
+        const randomZ = (Math.random() - 0.5) * 2;
+        targetWindDirection.set(randomX, 0, randomZ);
+        // Normalize manually
+        const length = Math.sqrt(randomX * randomX + randomZ * randomZ);
+        if (length > 0) {
+          targetWindDirection.scale(1 / length, targetWindDirection);
+        }
+        windChangeTime = WIND_CHANGE_INTERVAL;
+      }
+
+      // Smoothly interpolate current wind direction toward target
+      currentWindDirection.x +=
+        (targetWindDirection.x - currentWindDirection.x) * WIND_CHANGE_SPEED;
+      // currentWindDirection.z +=
+      //   (targetWindDirection.z - currentWindDirection.z) * WIND_CHANGE_SPEED;
+
+      // Normalize manually
+      const length = Math.sqrt(currentWindDirection.x * currentWindDirection.x);
+      if (length > 0) {
+        currentWindDirection.scale(1 / length, currentWindDirection);
+      }
+
+      // Find and apply wind to rocket body
+      const dynamicBodies = world.bodies.filter(
+        (body) => body.type === CANNON.Body.DYNAMIC
+      );
+
+      for (const body of dynamicBodies) {
+        if ((body as any).userData?.type === "rocket") {
+          // Apply wind force at the center of mass with current direction
+          const windForce = new CANNON.Vec3(
+            currentWindDirection.x * windStrength,
+            currentWindDirection.y * windStrength,
+            currentWindDirection.z * windStrength
+          );
+          body.applyForce(windForce, new CANNON.Vec3(0, 0, 0));
+        }
+      }
+    }
+
     world.step(timeStep);
   } catch (error) {
     handlePhysicsError("Error updating physics world", error as Error);

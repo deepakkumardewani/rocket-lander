@@ -14,6 +14,46 @@ const MAX_LANDING_ANGLE = 5; // Maximum angle from vertical for a safe landing (
 // Crash particle system for reuse across all collisions
 let crashParticles: ParticleSystem | null = null;
 
+// Map to track objects that should be treated as landing platforms
+const landingTargets = new Map<CANNON.Body, boolean>();
+
+/**
+ * Registers a platform as a valid landing target
+ * @param body The physics body of the platform
+ * @param isTarget Whether this is a primary landing target
+ */
+export function registerLandingTarget(
+  body: CANNON.Body,
+  isTarget: boolean = true
+): void {
+  landingTargets.set(body, isTarget);
+}
+
+/**
+ * Clears all registered landing targets
+ */
+export function clearLandingTargets(): void {
+  landingTargets.clear();
+}
+
+/**
+ * Checks if a body is a registered landing target
+ * @param body The physics body to check
+ * @returns True if body is a valid landing target
+ */
+function isLandingTarget(body: CANNON.Body): boolean {
+  return landingTargets.has(body);
+}
+
+/**
+ * Checks if a body is a primary landing target
+ * @param body The physics body to check
+ * @returns True if body is the primary landing target
+ */
+function isPrimaryLandingTarget(body: CANNON.Body): boolean {
+  return landingTargets.get(body) === true;
+}
+
 /**
  * Checks if a landing was successful based on criteria
  * @param rocketBody The rocket's physics body
@@ -90,6 +130,9 @@ export function setupCollisionDetection(
 ): () => void {
   const gameStore = useGameStore();
 
+  // Register the platform as a landing target by default
+  registerLandingTarget(platformBody, true);
+
   // Initialize crash particle system if not already created
   if (!crashParticles) {
     crashParticles = new ParticleSystem({
@@ -111,12 +154,53 @@ export function setupCollisionDetection(
         return;
       }
 
-      // Check if the collision is with the platform
-      if (event.body === platformBody) {
-        console.log("Collision detected between rocket and platform");
+      // Check collision type based on the object hit
+      if (isLandingTarget(event.body)) {
+        console.log(
+          "Collision detected between rocket and potential landing surface"
+        );
+
+        // For Sea Level 4, only allow landing on the primary target
+        const isSeaLevel4 =
+          gameStore.environment === "sea" && gameStore.currentLevel === 4;
 
         // Check if landing was successful
         const landingResult = checkLandingSuccess(rocketBody);
+
+        // For Sea Level 4, if it's not the primary target, always count as crash
+        if (isSeaLevel4 && !isPrimaryLandingTarget(event.body)) {
+          gameStore.setGameState("crashed");
+          console.log(
+            "Landing failed: Wrong platform - you must land on the green platform"
+          );
+
+          // Store the landing metrics for crash display
+          gameStore.calculateScore(landingResult.metrics);
+
+          // Spawn crash particles
+          if (crashParticles) {
+            const position = new THREE.Vector3(
+              rocketBody.position.x,
+              rocketBody.position.y,
+              rocketBody.position.z
+            );
+
+            crashParticles.spawn(
+              position,
+              new THREE.Vector3(0, 1, 0),
+              Math.PI,
+              5,
+              100
+            );
+          }
+
+          // Call crash callback if provided
+          if (onCrash) {
+            onCrash();
+          }
+
+          return;
+        }
 
         if (landingResult.success) {
           // Successful landing - stop rocket movement
@@ -126,6 +210,9 @@ export function setupCollisionDetection(
 
           // Update game state
           gameStore.setGameState("landed");
+
+          // Mark level as completed on successful landing
+          gameStore.markLevelCompleted();
 
           // Calculate score based on landing metrics
           gameStore.calculateScore(landingResult.metrics);
@@ -140,6 +227,9 @@ export function setupCollisionDetection(
           // Failed landing - rocket crashed
           gameStore.setGameState("crashed");
           console.log("Landing failed:", landingResult.reason);
+
+          // Store the landing metrics for crash display
+          gameStore.calculateScore(landingResult.metrics);
 
           // Spawn crash particles at the rocket's position
           if (crashParticles) {
@@ -165,9 +255,31 @@ export function setupCollisionDetection(
           }
         }
       } else {
-        // Collision with anything other than the platform (terrain, etc) is an automatic crash
+        // Collision with anything other than a landing target is an automatic crash
         gameStore.setGameState("crashed");
-        console.log("Rocket crashed into terrain or other object");
+
+        // Get final metrics for crash display
+        const crashMetrics: LandingMetrics = {
+          position: {
+            x: rocketBody.position.x,
+            y: rocketBody.position.y,
+            z: rocketBody.position.z,
+          },
+          velocity: {
+            x: rocketBody.velocity.x,
+            y: rocketBody.velocity.y,
+            z: rocketBody.velocity.z,
+          },
+        };
+        gameStore.calculateScore(crashMetrics);
+
+        // Check if collision is with an obstacle
+        const isMeshObstacle = event.body.collisionFilterGroup === 2;
+        console.log(
+          isMeshObstacle
+            ? "Rocket crashed into an obstacle"
+            : "Rocket crashed into terrain or other object"
+        );
 
         // Spawn crash particles
         if (crashParticles) {
@@ -193,7 +305,11 @@ export function setupCollisionDetection(
       }
     });
 
-    return cleanup;
+    return () => {
+      cleanup();
+      // Remove the platform from landing targets on cleanup
+      landingTargets.delete(platformBody);
+    };
   } catch (error) {
     handlePhysicsError("Error setting up collision detection", error as Error);
     // Return empty cleanup function in case of error

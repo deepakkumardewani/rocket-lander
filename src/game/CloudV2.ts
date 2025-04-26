@@ -8,6 +8,8 @@ interface CloudV2Params {
   numClusters?: number;
   texture?: THREE.Texture | null;
   camera?: THREE.Camera;
+  quality?: "low" | "medium" | "high";
+  useLOD?: boolean;
 }
 
 /**
@@ -25,6 +27,16 @@ export class CloudV2 {
   private windDirection: THREE.Vector3 = new THREE.Vector3(1, 0, 0);
   private windSpeed: number = 0.1;
   private camera: THREE.Camera | null = null;
+  private qualitySetting: "low" | "medium" | "high";
+  private useLOD: boolean;
+  private frustum: THREE.Frustum = new THREE.Frustum();
+  private projScreenMatrix: THREE.Matrix4 = new THREE.Matrix4();
+  private updateCounter: number = 0;
+  private lodDistances: { near: number; mid: number; far: number } = {
+    near: 1000,
+    mid: 3000,
+    far: 6000,
+  };
 
   /**
    * Create a new cloud system
@@ -37,9 +49,47 @@ export class CloudV2 {
     this.group = new THREE.Group();
     this.scene.add(this.group);
     this.camera = params.camera || null;
+    this.qualitySetting = params.quality || "medium";
+    this.useLOD = params.useLOD !== undefined ? params.useLOD : true;
 
-    // Create clouds
-    this.createClouds(params.numClusters || 15, params.texture);
+    // Adjust boundary based on quality setting
+    this.adjustBoundaryForQuality();
+
+    // Create clouds - adjust cloud count based on quality
+    this.createClouds(this.getCloudCount(params.numClusters), params.texture);
+  }
+
+  /**
+   * Adjust boundary for quality settings
+   */
+  private adjustBoundaryForQuality(): void {
+    if (this.qualitySetting === "low") {
+      // Reduce visibility distance for low quality
+      this.boundary *= 0.6;
+      this.lodDistances = { near: 800, mid: 2000, far: 4000 };
+    } else if (this.qualitySetting === "high") {
+      // Increase visibility for high quality
+      this.boundary *= 1.2;
+      this.lodDistances = { near: 1200, mid: 3500, far: 7000 };
+    }
+  }
+
+  /**
+   * Get adjusted cloud count based on quality and provided count
+   * @param baseClusters Base number of cloud clusters
+   * @returns Adjusted number of cloud clusters
+   */
+  private getCloudCount(baseClusters?: number): number {
+    const baseCount = baseClusters || 15;
+
+    switch (this.qualitySetting) {
+      case "low":
+        return Math.floor(baseCount * 0.5); // 50% of original count
+      case "high":
+        return baseCount;
+      default:
+        return Math.floor(baseCount * 0.75); // 75% of original count
+    }
   }
 
   /**
@@ -63,8 +113,24 @@ export class CloudV2 {
 
     const initClouds = (texture: THREE.Texture) => {
       // Create clouds in multiple rings for better distribution
-      const rings = 6;
+      const rings = this.qualitySetting === "low" ? 4 : 6;
       const clustersPerRing = Math.floor(numClusters / 3);
+
+      // Shared geometry for better performance
+      const geometry = new THREE.PlaneGeometry(1, 1);
+
+      // Create one material per texture to reduce draw calls
+      const sharedMaterial = new THREE.MeshBasicMaterial({
+        map: texture,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+        side: THREE.DoubleSide,
+        fog: true, // Enable fog for better distance fading
+      });
+
+      this.materials.push(sharedMaterial);
 
       for (let ring = 0; ring < rings; ring++) {
         // Exponential distribution for ring radius to place more clouds at horizon
@@ -89,6 +155,11 @@ export class CloudV2 {
           ringClusters = clustersPerRing;
         }
 
+        // Adjust for quality
+        if (this.qualitySetting === "low") {
+          ringClusters = Math.floor(ringClusters * 0.6);
+        }
+
         for (let i = 0; i < ringClusters; i++) {
           // Calculate position in this ring
           const angle = (i / ringClusters) * Math.PI * 2;
@@ -109,8 +180,10 @@ export class CloudV2 {
           const distanceScale = 0.8 + Math.pow(ring / (rings - 1), 2) * 1.2;
           const scale = (0.8 + Math.random() * 0.4) * distanceScale;
 
-          // Create multiple clouds at similar positions for denser clusters
-          const numCloudsAtPosition = ring >= 4 ? 2 : 1;
+          // Create fewer clouds at similar positions for denser clusters when in low or medium quality
+          const numCloudsAtPosition =
+            this.qualitySetting === "high" && ring >= 4 ? 2 : 1;
+
           for (let j = 0; j < numCloudsAtPosition; j++) {
             const offsetPosition = position.clone();
             if (j > 0) {
@@ -119,7 +192,12 @@ export class CloudV2 {
               offsetPosition.z += (Math.random() - 0.5) * 100;
               offsetPosition.y += (Math.random() - 0.5) * 50; // Increased vertical variation
             }
-            this.createSingleCloud(offsetPosition, scale, texture);
+            this.createSingleCloud(
+              offsetPosition,
+              scale,
+              geometry,
+              sharedMaterial
+            );
           }
         }
       }
@@ -139,34 +217,29 @@ export class CloudV2 {
    * Create a single cloud with multiple planes for volumetric effect
    * @param position Cloud position
    * @param scale Scale multiplier
-   * @param texture Texture to use for cloud planes
+   * @param geometry Shared geometry to use
+   * @param material Shared material to use
    */
   private createSingleCloud(
     position: THREE.Vector3,
     scale: number = 1.0,
-    texture: THREE.Texture
+    geometry: THREE.BufferGeometry,
+    material: THREE.Material
   ): void {
     const cloudGroup = new THREE.Group();
-    const numLayers = 4;
-
-    // Create cloud layers
-    const geometry = new THREE.PlaneGeometry(1, 1);
+    // Adjust number of layers based on quality
+    const numLayers =
+      this.qualitySetting === "low"
+        ? 2
+        : this.qualitySetting === "medium"
+        ? 3
+        : 4;
 
     // Create layers at fixed angles
     const angleStep = (Math.PI * 2) / numLayers;
     for (let i = 0; i < numLayers; i++) {
-      // Create base material
-      const material = new THREE.MeshBasicMaterial({
-        map: texture,
-        transparent: true,
-        opacity: 0.5,
-        depthWrite: false,
-        blending: THREE.NormalBlending,
-        side: THREE.DoubleSide,
-        fog: true, // Enable fog for better distance fading
-      });
-
       const mesh = new THREE.Mesh(geometry, material);
+      this.meshes.push(mesh);
 
       // Position layers in a fixed circular pattern
       const angle = angleStep * i;
@@ -181,8 +254,6 @@ export class CloudV2 {
       const layerScale = scale * 200 * (0.85 + Math.random() * 0.3);
       mesh.scale.set(layerScale, layerScale * 0.6, 1);
 
-      this.meshes.push(mesh);
-      this.materials.push(material);
       cloudGroup.add(mesh);
     }
 
@@ -190,6 +261,9 @@ export class CloudV2 {
     cloudGroup.position.copy(position);
     // Give each cloud in cluster a random fixed rotation
     cloudGroup.rotation.y = Math.random() * Math.PI * 2;
+
+    // Store distance from origin for LOD calculations
+    cloudGroup.userData.distanceFromOrigin = position.length();
 
     this.cloudClusters.push(cloudGroup);
     this.group.add(cloudGroup);
@@ -207,25 +281,50 @@ export class CloudV2 {
 
   /**
    * Update cloud system for the current frame
+   * @param direction Wind direction
    * @param deltaTime Time since last frame in seconds
    */
-  public update(deltaTime: number): void {
+  public update(direction: THREE.Vector3, deltaTime: number): void {
     this.time += deltaTime;
+
+    // Update wind direction
+    this.windDirection.copy(direction).normalize();
+
+    // Skip updates for better performance based on quality
+    this.updateCounter = (this.updateCounter + 1) % this.getUpdateFrequency();
+    if (this.updateCounter !== 0) return;
+
+    // Scale delta time to compensate for skipped frames
+    const scaledDelta = deltaTime * this.getUpdateFrequency();
+
+    // Only update if camera exists
+    if (!this.camera) return;
+
+    // Update the frustum for culling
+    this.updateFrustum();
 
     // Update each cloud cluster
     this.cloudClusters.forEach((cloudGroup) => {
+      // Skip update if cloud group is outside view frustum (culling)
+      if (this.useLOD && !this.isInView(cloudGroup)) {
+        cloudGroup.visible = false;
+        return;
+      }
+
+      cloudGroup.visible = true;
+
       // Move cloud based on wind direction and speed
       cloudGroup.position.x +=
-        this.windDirection.x * this.windSpeed * deltaTime;
+        this.windDirection.x * this.windSpeed * scaledDelta;
       cloudGroup.position.z +=
-        this.windDirection.z * this.windSpeed * deltaTime;
+        this.windDirection.z * this.windSpeed * scaledDelta;
 
       // Very subtle rotation
-      cloudGroup.rotation.y += deltaTime * 0.001 * (Math.random() - 0.5);
+      cloudGroup.rotation.y += scaledDelta * 0.001 * (Math.random() - 0.5);
 
-      // Update opacities based on view angle and distance if camera exists
-      if (this.camera) {
-        this.updateCloudOpacity(cloudGroup, this.camera);
+      // Update opacities based on view angle and distance
+      if (this.useLOD && this.camera) {
+        this.updateCloudLOD(cloudGroup, this.camera);
       }
 
       // Wrap around when cloud goes too far
@@ -234,86 +333,169 @@ export class CloudV2 {
   }
 
   /**
-   * Update cloud opacity based on camera angle and distance
-   * @param cloudGroup Cloud group to update
-   * @param camera Camera to use for calculations
+   * Get update frequency based on quality setting
+   * @returns Number of frames to skip between updates
    */
-  private updateCloudOpacity(
-    cloudGroup: THREE.Group,
-    camera: THREE.Camera
-  ): void {
-    cloudGroup.children.forEach((child, index) => {
-      const mesh = child as THREE.Mesh;
-
-      // Get world normal of the cloud plane
-      const normal = new THREE.Vector3(0, 0, 1);
-      normal.applyQuaternion(mesh.getWorldQuaternion(new THREE.Quaternion()));
-
-      // Get direction and distance from camera to cloud
-      const cloudWorldPos = mesh.getWorldPosition(new THREE.Vector3());
-      const toCamera = new THREE.Vector3();
-      toCamera.subVectors(camera.position, cloudWorldPos).normalize();
-
-      // Calculate distance factor (0 to 1, where 1 is at max distance)
-      const distance = camera.position.distanceTo(cloudWorldPos);
-      const distanceFactor = Math.min(distance / 10000, 1); // Adjusted for our scale
-
-      // Calculate dot product (0 = perpendicular, 1 = parallel)
-      const dot = Math.abs(normal.dot(toCamera));
-
-      // Adjust opacity based on angle and distance with a more gradual fade
-      const baseOpacity = 0.5;
-      const minOpacity = 0.1;
-
-      // More sophisticated distance fading for horizon clouds
-      const distanceOpacity =
-        distance > 8000
-          ? 0.3 + 0.7 * (1 - Math.pow((distance - 8000) / 4000, 2)) // Quadratic falloff for very distant clouds
-          : 0.3 + 0.7 * (1 - distanceFactor); // Linear falloff for closer clouds
-
-      const material = mesh.material as THREE.MeshBasicMaterial;
-      material.opacity =
-        (minOpacity + (baseOpacity - minOpacity) * dot) * distanceOpacity;
-    });
+  private getUpdateFrequency(): number {
+    switch (this.qualitySetting) {
+      case "low":
+        return 3; // Update every 3 frames
+      case "medium":
+        return 2; // Update every 2 frames
+      case "high":
+        return 1; // Update every frame
+      default:
+        return 1;
+    }
   }
 
   /**
-   * Check if a cloud has gone beyond world boundaries and wrap it
+   * Update the frustum for view culling
+   */
+  private updateFrustum(): void {
+    if (!this.camera) return;
+
+    this.projScreenMatrix.multiplyMatrices(
+      this.camera.projectionMatrix,
+      this.camera.matrixWorldInverse
+    );
+    this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
+  }
+
+  /**
+   * Check if a cloud group is in the camera's view
+   * @param cloudGroup Cloud group to check
+   * @returns Whether the cloud is in view
+   */
+  private isInView(cloudGroup: THREE.Group): boolean {
+    // Create a bounding sphere for the cloud group
+    const position = cloudGroup.position;
+    const radius = 250; // Approximate cloud radius
+
+    // Return true if bounding sphere is in view frustum
+    return this.frustum.intersectsSphere(new THREE.Sphere(position, radius));
+  }
+
+  /**
+   * Update cloud LOD (Level of Detail) based on distance
+   * @param cloudGroup Cloud group to update
+   * @param camera Camera for distance calculation
+   */
+  private updateCloudLOD(cloudGroup: THREE.Group, camera: THREE.Camera): void {
+    const distance = cloudGroup.position.distanceTo(camera.position);
+    const children = cloudGroup.children;
+
+    // Adjust visibility based on distance
+    if (distance > this.lodDistances.far) {
+      // Far distance - show only half of planes for distant clouds
+      for (let i = 0; i < children.length; i++) {
+        children[i].visible = i % 2 === 0;
+      }
+    } else if (distance > this.lodDistances.mid) {
+      // Medium distance - show 75% of planes
+      for (let i = 0; i < children.length; i++) {
+        children[i].visible = i % 4 !== 3;
+      }
+    } else {
+      // Near distance - show all planes
+      for (let i = 0; i < children.length; i++) {
+        children[i].visible = true;
+      }
+    }
+
+    // Adjust opacity based on distance for better fade out
+    const maxVisibleDistance = this.boundary * 1.1;
+    if (distance > this.boundary * 0.9) {
+      const fadeOutFactor =
+        1 -
+        Math.min(
+          1,
+          (distance - this.boundary * 0.9) /
+            (maxVisibleDistance - this.boundary * 0.9)
+        );
+      children.forEach((child) => {
+        const material = (child as THREE.Mesh)
+          .material as THREE.MeshBasicMaterial;
+        if (material && material.opacity !== undefined) {
+          material.opacity = 0.5 * fadeOutFactor;
+        }
+      });
+    }
+  }
+
+  /**
+   * Check if cloud has gone beyond the world boundary and wrap it around
    * @param cloudGroup Cloud group to check
    */
   private checkWorldBounds(cloudGroup: THREE.Group): void {
-    // Wrap around when cloud goes too far
-    const boundary = this.boundary * 2;
-    if (Math.abs(cloudGroup.position.x) > boundary) {
-      cloudGroup.position.x = -Math.sign(cloudGroup.position.x) * boundary;
-    }
-    if (Math.abs(cloudGroup.position.z) > boundary) {
-      cloudGroup.position.z = -Math.sign(cloudGroup.position.z) * boundary;
+    const distance = Math.sqrt(
+      cloudGroup.position.x * cloudGroup.position.x +
+        cloudGroup.position.z * cloudGroup.position.z
+    );
+
+    if (distance > this.boundary * 1.1) {
+      // Move to the opposite side but maintain relative angle
+      const angle = Math.atan2(cloudGroup.position.z, cloudGroup.position.x);
+      const newDistance = this.boundary * 0.7;
+      cloudGroup.position.x = Math.cos(angle) * -newDistance;
+      cloudGroup.position.z = Math.sin(angle) * -newDistance;
     }
   }
 
   /**
    * Get the group containing all clouds
-   * @returns THREE.Group containing all clouds
+   * @returns The cloud group
    */
-  public getGroup(): THREE.Group {
+  public getMesh(): THREE.Group {
     return this.group;
   }
 
   /**
-   * Clean up all resources
+   * Set the quality level for clouds
+   * @param quality Quality level
+   */
+  public setQuality(quality: "low" | "medium" | "high"): void {
+    if (this.qualitySetting === quality) return;
+    this.qualitySetting = quality;
+
+    // Update LOD distances based on quality
+    if (quality === "low") {
+      this.lodDistances = { near: 800, mid: 2000, far: 4000 };
+    } else if (quality === "high") {
+      this.lodDistances = { near: 1200, mid: 3500, far: 7000 };
+    } else {
+      this.lodDistances = { near: 1000, mid: 3000, far: 6000 };
+    }
+  }
+
+  /**
+   * Clean up resources
    */
   public dispose(): void {
-    if (this.group) {
-      this.meshes.forEach((mesh) => {
-        mesh.geometry.dispose();
-        (mesh.material as THREE.Material).dispose();
-      });
-
-      this.materials = [];
-      this.meshes = [];
-      this.cloudClusters = [];
+    // Remove all clouds from scene
+    if (this.group && this.scene) {
       this.scene.remove(this.group);
     }
+
+    // Dispose of geometries and materials
+    this.meshes.forEach((mesh) => {
+      if (mesh.geometry) {
+        mesh.geometry.dispose();
+      }
+    });
+
+    // Dispose of materials (careful not to dispose shared materials multiple times)
+    const disposedMaterials = new Set();
+    this.materials.forEach((material) => {
+      if (!disposedMaterials.has(material)) {
+        material.dispose();
+        disposedMaterials.add(material);
+      }
+    });
+
+    // Clear arrays
+    this.meshes = [];
+    this.materials = [];
+    this.cloudClusters = [];
   }
 }

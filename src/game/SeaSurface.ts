@@ -14,6 +14,10 @@ export class SeaSurface {
   private waveSpeedFactor: number = 1.0;
   private normalMap: THREE.Texture | null = null;
   private sunDirection: THREE.Vector3 = new THREE.Vector3(0.70707, 0.70707, 0);
+  private updateCounter: number = 0;
+  private updateFrequency: number = 1; // Update every frame by default
+  private qualitySetting: "low" | "medium" | "high" = "medium";
+  private eventListenerRef: ((event: Event) => void) | null = null;
 
   /**
    * Create a new sea surface with waves using Three.js Water
@@ -32,6 +36,7 @@ export class SeaSurface {
     waveSpeedFactor = 1.0,
     sunDirection = new THREE.Vector3(0.70707, 0.70707, 0),
     cubeRenderTarget = null,
+    quality = "medium",
   }: {
     size?: number;
     waterColor?: number;
@@ -45,11 +50,16 @@ export class SeaSurface {
     waveSpeedFactor?: number;
     sunDirection?: THREE.Vector3;
     cubeRenderTarget?: THREE.WebGLCubeRenderTarget | null;
+    quality?: "low" | "medium" | "high";
   } = {}) {
     // Store properties
     this.waveDirection = waveDirection;
     this.waveSpeedFactor = waveSpeedFactor;
     this.sunDirection = sunDirection;
+    this.qualitySetting = quality;
+
+    // Adjust texture size based on quality
+    const adjustedTextureSize = this.getTextureSize(textureSize);
 
     // Create the water geometry (plane)
     const waterGeometry = new THREE.PlaneGeometry(size, size);
@@ -67,13 +77,13 @@ export class SeaSurface {
 
     // Create the water object using Three.js Water
     this.water = new Water(waterGeometry, {
-      textureWidth: textureSize,
-      textureHeight: textureSize,
+      textureWidth: adjustedTextureSize,
+      textureHeight: adjustedTextureSize,
       waterNormals: normalMap,
       sunDirection: this.sunDirection.clone().normalize(),
       sunColor: sunColor,
       waterColor: waterColor,
-      distortionScale: distortionScale,
+      distortionScale: this.adjustDistortionScale(distortionScale),
       fog: fog,
       // Add cube render target for reflections if provided
       ...(cubeRenderTarget && { reflectionCubeRenderTarget: cubeRenderTarget }),
@@ -114,11 +124,61 @@ export class SeaSurface {
     // Set initial wave direction
     this.setWaveDirection(this.waveDirection);
 
+    // Set update frequency based on quality
+    this.updateFrequency = this.getUpdateFrequency();
+
+    // Store the event listener reference for proper cleanup
+    this.eventListenerRef = this.handleSunPositionChanged.bind(this);
+
     // Listen for sun position changes from scene manager
-    window.addEventListener(
-      "sunPositionChanged",
-      this.handleSunPositionChanged as EventListener
-    );
+    window.addEventListener("sunPositionChanged", this.eventListenerRef);
+  }
+
+  /**
+   * Calculate the appropriate texture size based on quality setting
+   * @param baseSize The base texture size
+   * @returns The adjusted texture size
+   */
+  private getTextureSize(baseSize: number): number {
+    switch (this.qualitySetting) {
+      case "low":
+        return Math.floor(baseSize / 2); // Half resolution
+      case "high":
+        return baseSize; // Full resolution
+      default:
+        return Math.floor(baseSize * 0.75); // 75% resolution
+    }
+  }
+
+  /**
+   * Adjust distortion scale based on quality
+   * @param baseScale The base distortion scale
+   * @returns The adjusted distortion scale
+   */
+  private adjustDistortionScale(baseScale: number): number {
+    switch (this.qualitySetting) {
+      case "low":
+        return baseScale * 0.5; // Lower distortion for better performance
+      case "high":
+        return baseScale * 1.2; // Higher distortion for better visuals
+      default:
+        return baseScale;
+    }
+  }
+
+  /**
+   * Get update frequency based on quality
+   * @returns Number of frames to skip between updates
+   */
+  private getUpdateFrequency(): number {
+    switch (this.qualitySetting) {
+      case "low":
+        return 4; // Update every 4 frames
+      case "high":
+        return 1; // Update every frame
+      default:
+        return 2; // Update every 2 frames
+    }
   }
 
   /**
@@ -146,10 +206,17 @@ export class SeaSurface {
    * @param deltaTime Time since last update in seconds
    */
   public update(deltaTime: number): void {
+    // Increment counter and check if we should update this frame
+    this.updateCounter = (this.updateCounter + 1) % this.updateFrequency;
+    if (this.updateCounter !== 0) return;
+
     if (this.water && this.water.material.uniforms["time"]) {
+      // Scale delta time to compensate for skipped frames
+      const scaledDelta = deltaTime * this.updateFrequency;
+
       // Apply the wave speed factor to the time increment
       this.water.material.uniforms["time"].value +=
-        deltaTime * this.waveSpeedFactor;
+        scaledDelta * this.waveSpeedFactor;
 
       // Update normal map offset based on wave direction
       const time = this.water.material.uniforms["time"].value;
@@ -158,6 +225,26 @@ export class SeaSurface {
         time * this.waveDirection.y * 0.05
       );
     }
+  }
+
+  /**
+   * Set the quality level for the sea surface
+   * @param quality Quality level
+   */
+  public setQuality(quality: "low" | "medium" | "high"): void {
+    if (this.qualitySetting === quality) return;
+
+    this.qualitySetting = quality;
+
+    // Update distortion scale based on quality
+    if (this.water && this.water.material.uniforms["distortionScale"]) {
+      const baseScale = 3.7; // Default distortion scale
+      this.water.material.uniforms["distortionScale"].value =
+        this.adjustDistortionScale(baseScale);
+    }
+
+    // Update update frequency
+    this.updateFrequency = this.getUpdateFrequency();
   }
 
   /**
@@ -280,38 +367,38 @@ export class SeaSurface {
   }
 
   /**
-   * Dispose of resources
+   * Clean up resources used by the sea surface
    */
   public dispose(): void {
-    // Remove event listener
-    window.removeEventListener(
-      "sunPositionChanged",
-      this.handleSunPositionChanged as EventListener
-    );
+    // Remove event listener using the stored reference
+    if (this.eventListenerRef) {
+      window.removeEventListener("sunPositionChanged", this.eventListenerRef);
+      this.eventListenerRef = null;
+    }
 
+    // Remove from physics world
+    if (world && this.body) {
+      world.removeBody(this.body);
+    }
+
+    // Dispose of geometry and material
     if (this.water) {
-      // Dispose of geometry
       if (this.water.geometry) {
         this.water.geometry.dispose();
       }
 
-      // Dispose of material
       if (this.water.material) {
-        if (
-          this.water.material.uniforms &&
-          this.water.material.uniforms["normalSampler"] &&
-          this.water.material.uniforms["normalSampler"].value
-        ) {
-          // Don't dispose textures as they might be shared
+        // Material should be disposable
+        if ("dispose" in this.water.material) {
+          (this.water.material as THREE.Material).dispose();
         }
-
-        this.water.material.dispose();
       }
     }
 
-    // Remove physics body from world
-    if (this.body && world.bodies.includes(this.body)) {
-      world.removeBody(this.body);
+    // Dispose of textures
+    if (this.normalMap) {
+      this.normalMap.dispose();
+      this.normalMap = null;
     }
   }
 
@@ -367,6 +454,28 @@ export class SeaSurface {
     const scene = this.water.parent;
     if (scene) {
       scene.add(gridMesh);
+    }
+  }
+
+  /**
+   * Set the wave height for the water surface
+   * @param height The wave height value (0-1 recommended)
+   */
+  public setWaveHeight(height: number): void {
+    if (this.water && this.water.material.uniforms["waveHeight"]) {
+      this.water.material.uniforms["waveHeight"].value = height;
+    } else {
+      // If waveHeight uniform doesn't exist, try to add it to the shader
+      if (this.water && this.water.material) {
+        // Add the uniform if it doesn't exist
+        this.water.material.uniforms["waveHeight"] = { value: height };
+
+        // This might require modifying shader code for proper rendering
+        // For now, we'll update parameters based on the height for a simple effect
+        this.setParameters({
+          distortionScale: 3.7 + height * 5, // Increase distortion with wave height
+        });
+      }
     }
   }
 }
