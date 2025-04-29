@@ -6,15 +6,10 @@ import {
   handlePhysicsError,
 } from "../utils/errorHandler";
 import { assetLoader } from "../utils/assetLoader";
-import { ParticleSystem } from "./particleSystem";
-
-/**
- * Parameters for creating a rocket
- */
-interface RocketParams {
-  position?: THREE.Vector3;
-  color?: number;
-}
+import { ParticleSystem } from "./ParticleSystem";
+import { useGameStore } from "../stores/gameStore";
+import type { RocketParams, RocketModelConfig } from "../types/rocketTypes";
+import { ROCKET_MODELS_CONFIG } from "../lib/config";
 
 /**
  * Class representing a rocket in the game
@@ -23,7 +18,8 @@ export class Rocket {
   private mesh: THREE.Object3D;
   private body: CANNON.Body;
   private rocketMaterial: CANNON.Material;
-  private thrusterParticles: ParticleSystem;
+  private thrusterParticles: ParticleSystem[];
+  private modelConfig: RocketModelConfig;
 
   /**
    * Create a new rocket
@@ -31,10 +27,23 @@ export class Rocket {
    */
   constructor(params: RocketParams = {}) {
     try {
-      // Set default values if not provided
-      const position = params.position || new THREE.Vector3(0, 15, 0); // Higher starting position
-      const color = params.color || 0xaaaaaa; // Gray color
+      // Get appropriate configuration for the current rocket model
+      const gameStore = useGameStore();
+      const currentModel = gameStore.rocketModel;
+      this.modelConfig =
+        ROCKET_MODELS_CONFIG[currentModel.id] ||
+        ROCKET_MODELS_CONFIG["default"];
 
+      // Set default values if not provided
+      const position =
+        params.position ||
+        new THREE.Vector3(
+          this.modelConfig.position.x,
+          this.modelConfig.position.y,
+          this.modelConfig.position.z
+        );
+
+      console.log("position", position);
       // Get the rocket model from the asset loader
       const rocketModel = assetLoader.getModel("rocket");
 
@@ -42,11 +51,24 @@ export class Rocket {
         throw new Error("Rocket model not loaded");
       }
 
-      // Clone the model to avoid modifying the original
+      // Always clone the model to ensure we have a fresh instance
       this.mesh = rocketModel.clone();
 
-      // Set up the mesh
+      // Set up the mesh position first
       this.mesh.position.copy(position);
+
+      // Scale the model using the model-specific scale factor
+      this.mesh.scale.set(
+        this.modelConfig.scale,
+        this.modelConfig.scale,
+        this.modelConfig.scale
+      );
+
+      // Apply model-specific position offset AFTER scaling
+      this.mesh.position.copy(this.modelConfig.position);
+
+      // Apply model-specific rotation
+      this.mesh.rotation.copy(this.modelConfig.rotation);
 
       // Apply shadow settings to all meshes in the model
       this.mesh.traverse((child) => {
@@ -56,26 +78,46 @@ export class Rocket {
         }
       });
 
-      // Scale the model if needed (adjust these values based on your model's size)
-      this.mesh.scale.set(0.2, 0.2, 0.2);
-
       // Create physics material
       this.rocketMaterial = createPhysicsMaterial("rocket", 0.2, 0.5);
 
       // Create physics body using cylinder shape for collision
-      // Note: We still use a cylinder for physics even though the visual is different
+      // Use physics body dimensions from model config
+      const bodyRadius = this.modelConfig.physicsBody.radius;
+      const bodyHeight = this.modelConfig.physicsBody.height;
+
       this.body = new CANNON.Body({
         mass: 1, // kg
         material: this.rocketMaterial,
-        shape: new CANNON.Cylinder(0.1, 0.1, 0.4, 8), // Scale dimensions to match visual model (0.2 * original size)
-        position: new CANNON.Vec3(position.x, position.y, position.z),
+        shape: new CANNON.Cylinder(bodyRadius, bodyRadius, bodyHeight, 8),
+        position: new CANNON.Vec3(
+          this.modelConfig.position.x,
+          this.modelConfig.position.y,
+          this.modelConfig.position.z
+        ),
         linearDamping: 0.1, // Air resistance for linear motion
         angularDamping: 0.5, // Air resistance for rotation
       });
 
+      // Set initial rotation from model config
+      const quaternion = new THREE.Quaternion().setFromEuler(
+        this.modelConfig.rotation
+      );
+      this.body.quaternion.set(
+        quaternion.x,
+        quaternion.y,
+        quaternion.z,
+        quaternion.w
+      );
+
       // Adjust the shape offset so the bottom of the cylinder contacts surfaces
-      const cylinderHeight = 0.2; // Height of the cylinder shape (scaled to match visual)
-      this.body.shapeOffsets[0].set(0, -cylinderHeight / 2, 0);
+      const cylinderHeight = bodyHeight / 2;
+      // Use collisionOffset from config if available, otherwise use default calculation
+      const offsetY =
+        this.modelConfig.physicsBody.collisionOffset !== undefined
+          ? this.modelConfig.physicsBody.collisionOffset
+          : -cylinderHeight / 2;
+      this.body.shapeOffsets[0].set(0, offsetY, 0);
       this.body.updateMassProperties();
       this.body.updateBoundingRadius();
 
@@ -87,13 +129,16 @@ export class Rocket {
       // Use type assertion for userData since it's not in the type definition
       (this.body as any).userData = { type: "rocket", owner: this };
 
-      // Create thruster particle system
-      this.thrusterParticles = new ParticleSystem({
-        count: 200,
-        color: 0xffa500, // Orange color
-        size: 0.2,
-        lifetime: 0.8, // Short lifetime for better effect
-      });
+      // Create thruster particle systems with model-specific settings
+      this.thrusterParticles = this.modelConfig.thrusters.map(
+        (thrusterConfig) =>
+          new ParticleSystem({
+            count: thrusterConfig.count,
+            color: thrusterConfig.color,
+            size: thrusterConfig.size,
+            lifetime: thrusterConfig.lifetime,
+          })
+      );
     } catch (error) {
       handleRenderingError("Failed to create rocket", error as Error);
       throw error; // Re-throw to prevent creating an invalid object
@@ -117,37 +162,56 @@ export class Rocket {
   }
 
   /**
-   * Get the thruster particle system
-   * @returns The thruster particle system
+   * Get all thruster particle systems
+   * @returns Array of thruster particle systems
    */
-  getThrusterParticles(): ParticleSystem {
+  getThrusterParticles(): ParticleSystem[] {
     return this.thrusterParticles;
   }
 
   /**
-   * Emit thruster particles
-   * @param count Number of particles to emit
+   * Get the model configuration
+   * @returns The rocket's model configuration
+   */
+  getModelConfig(): RocketModelConfig {
+    return this.modelConfig;
+  }
+
+  /**
+   * Emit particles from all thrusters
+   * @param count Number of particles to emit per thruster
    */
   emitThrusterParticles(count: number = 10): void {
-    // Calculate position at the bottom of rocket in local space
-    const localPosition = new THREE.Vector3(0, -1, 0);
-    const worldPosition = this.mesh.localToWorld(localPosition.clone());
+    this.modelConfig.thrusters.forEach((thrusterConfig, index) => {
+      // Use the model-specific thruster position
+      const localPosition = thrusterConfig.position.clone();
 
-    // Get the rocket's down direction in world space (opposite of up)
-    const localDirection = new THREE.Vector3(0, -1, 0);
-    const worldDirection = this.mesh
-      .localToWorld(localDirection.clone())
-      .sub(this.mesh.position)
-      .normalize();
+      // If diameter is specified, randomly distribute particles within the circular area
+      if (thrusterConfig.diameter) {
+        const radius = (thrusterConfig.diameter * Math.sqrt(Math.random())) / 2;
+        const angle = Math.random() * Math.PI * 2;
+        localPosition.x += radius * Math.cos(angle);
+        localPosition.z += radius * Math.sin(angle);
+      }
 
-    // Spawn particles at the calculated position, in the rocket's down direction
-    this.thrusterParticles.spawn(
-      worldPosition,
-      worldDirection,
-      Math.PI / 8, // Narrower spread for thruster
-      3, // Higher speed for thruster particles
-      count
-    );
+      const worldPosition = this.mesh.localToWorld(localPosition.clone());
+
+      // Use the model-specific thruster direction
+      const localDirection = thrusterConfig.direction.clone();
+      const worldDirection = this.mesh
+        .localToWorld(localDirection.clone())
+        .sub(this.mesh.position)
+        .normalize();
+
+      // Spawn particles using model-specific settings
+      this.thrusterParticles[index].spawn(
+        worldPosition,
+        worldDirection,
+        thrusterConfig.spread,
+        thrusterConfig.speed,
+        count
+      );
+    });
   }
 
   /**
@@ -229,7 +293,9 @@ export class Rocket {
    */
   addToScene(scene: THREE.Scene): void {
     scene.add(this.mesh);
-    scene.add(this.thrusterParticles.getMesh());
+    this.thrusterParticles.forEach((particles) => {
+      scene.add(particles.getMesh());
+    });
   }
 
   /**
@@ -238,7 +304,9 @@ export class Rocket {
    */
   removeFromScene(scene: THREE.Scene): void {
     scene.remove(this.mesh);
-    scene.remove(this.thrusterParticles.getMesh());
+    this.thrusterParticles.forEach((particles) => {
+      scene.remove(particles.getMesh());
+    });
   }
 
   /**
@@ -248,8 +316,10 @@ export class Rocket {
     // Remove from physics world
     world.removeBody(this.body);
 
-    // Dispose of particle system
-    this.thrusterParticles.dispose();
+    // Dispose of particle systems
+    this.thrusterParticles.forEach((particles) => {
+      particles.dispose();
+    });
 
     // Dispose of Three.js resources
     this.mesh.traverse((child) => {

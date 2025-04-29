@@ -1,7 +1,7 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
-import { ErrorType, handlePhysicsError } from "../utils/errorHandler";
-
+import { handlePhysicsError } from "../utils/errorHandler";
+import { WIND_CHANGE_INTERVAL, WIND_CHANGE_SPEED } from "../constants";
 // Create and configure the physics world
 export const world = new CANNON.World();
 world.gravity.set(0, -9.81, 0); // Set gravity along the Y axis
@@ -21,12 +21,10 @@ export let windStrength: number = 0;
 
 // Current wind direction vector (normalized)
 const currentWindDirection = new CANNON.Vec3(1, 0, 0);
+
 // Time until next wind change
 let windChangeTime = 0;
-// How often the wind changes direction (in seconds)
-const WIND_CHANGE_INTERVAL = 3;
-// How quickly the wind transitions to new direction (0-1, higher = faster)
-const WIND_CHANGE_SPEED = 0.05;
+
 // Target wind direction for smooth transitions
 let targetWindDirection = new CANNON.Vec3(1, 0, 0);
 

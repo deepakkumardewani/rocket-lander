@@ -7,7 +7,6 @@ import { ShootingStars } from "./space/ShootingStars";
 import { Nebula } from "./space/Nebula";
 import { Aurora } from "./space/Aurora";
 import { LensFlare } from "./space/LensFlare";
-// import { CloudV2 } from "./CloudV2";
 import { Birds } from "./sea/Birds";
 import { Cloud } from "./sea/Clouds";
 
@@ -193,11 +192,11 @@ export class SceneManager {
     this.camera.lookAt(0, 0, 0);
 
     // Add ambient light with soft blue tint for sky color reflection
-    const ambientLight = new THREE.AmbientLight(0xd4e9ff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xd4e9ff, 0.3);
     this.scene.add(ambientLight);
 
     // Add main directional light with warm sunset color
-    this.directionalLight = new THREE.DirectionalLight(0xffeddb, 0.5);
+    this.directionalLight = new THREE.DirectionalLight(0xffeddb, 0.3);
     this.directionalLight.position.copy(this.sunPosition);
     this.directionalLight.lookAt(0, 0, 0);
     this.directionalLight.castShadow = true;
@@ -215,7 +214,7 @@ export class SceneManager {
     this.directionalLight.shadow.radius = 3; // Increased shadow softness
 
     // Add a subtle fill light from the opposite direction
-    const fillLight = new THREE.DirectionalLight(0x9ab9ff, 0.2); // Soft blue color
+    const fillLight = new THREE.DirectionalLight(0x9ab9ff, 0.1);
     fillLight.position.set(-15, 10, -10);
     fillLight.lookAt(0, 0, 0);
     this.scene.add(fillLight);
@@ -224,7 +223,7 @@ export class SceneManager {
     const hemisphereLight = new THREE.HemisphereLight(
       0x9ab9ff, // Sky color - soft blue
       0xffe1cc, // Ground color - soft peach
-      0.3
+      0.2
     );
     this.scene.add(hemisphereLight);
 
@@ -949,5 +948,13 @@ export class SceneManager {
     if (this.renderer && this.scene && this.camera) {
       this.renderer.render(this.scene, this.camera);
     }
+  }
+
+  /**
+   * Checks if a sky component is active in the scene
+   * @returns Boolean indicating if sky component exists
+   */
+  public hasSky(): boolean {
+    return this.sky !== null;
   }
 }

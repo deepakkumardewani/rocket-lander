@@ -4,8 +4,8 @@ import * as THREE from "three";
 import { onCollision } from "./physics";
 import { handlePhysicsError } from "../utils/errorHandler";
 import { useGameStore } from "../stores/gameStore";
-import type { LandingMetrics } from "../stores/gameStore";
-import { ParticleSystem } from "./particleSystem";
+import type { LandingMetrics } from "../types/storeTypes";
+import { ParticleSystem } from "./ParticleSystem";
 
 // Constants for successful landing criteria
 const MAX_LANDING_VELOCITY = 5; // Maximum vertical velocity for a safe landing (m/s)

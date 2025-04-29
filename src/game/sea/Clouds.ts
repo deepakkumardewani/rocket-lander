@@ -34,8 +34,8 @@ export class Cloud {
   private static projScreenMatrix = new THREE.Matrix4();
   private static tempMatrix = new THREE.Matrix4();
   private static tempVector = new THREE.Vector3();
-  private static tempQuaternion = new THREE.Quaternion();
-  private static tempEuler = new THREE.Euler();
+  // private static tempQuaternion = new THREE.Quaternion();
+  // private static tempEuler = new THREE.Euler();
 
   constructor({
     scene,
