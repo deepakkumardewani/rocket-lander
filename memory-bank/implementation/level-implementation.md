@@ -85,14 +85,12 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 ## Step 6: Adjust Platform Size and Type per Level ✅
 
-- **Action:** Configure platform dimensions and type (Platform or BoatPlatform) based on the level.
+- **Action:** Configure platform dimensions and type (Platform) based on the level.
 - **Instructions:**
-  - In `src/game/Platform.ts` and `BoatPlatform.ts`, ensure constructors accept `width` and `depth`.
+  - In `src/game/Platform.ts` ensure constructors accept `width` and `depth`.
   - In `Platform.ts`, use `new THREE.BoxGeometry(width, 1, depth)` and `new CANNON.Vec3(width / 2, 0.5, depth / 2)` for the physics shape.
-  - Apply similar updates to `BoatPlatform.ts`.
   - In `GameCanvas.vue`, when initializing the platform:
     - If `selectedEnvironment` is 'space', create a `Platform` with `levelConfig.value.platformWidth` and `levelConfig.value.platformDepth`.
-    - If 'sea', create a `BoatPlatform` with the same dimensions.
 - **Test:** Start Space Level 5 (3x3). Confirm the platform is tiny. Switch to Sea Level 1 (20x10), confirm the boat is larger and rectangular.
 
 ---
@@ -101,7 +99,7 @@ This plan provides step-by-step instructions to implement five levels for both t
 
 - **Action:** Add platform movement (oscillate, drift, tilt) as specified in the level config.
 - **Instructions:**
-  - In `Platform.ts` and `BoatPlatform.ts`:
+  - In `Platform.ts`:
     - Add a `movement?: { type: 'oscillate' | 'drift' | 'tilt'; axis?: 'x' | 'z'; amplitude: number; frequency: number }` property and `initialPosition: CANNON.Vec3`.
     - Store `body.position.clone()` as `initialPosition` in the constructor.
     - Add an `update(time: number)` method:
@@ -110,7 +108,7 @@ This plan provides step-by-step instructions to implement five levels for both t
       - For 'tilt', set `body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), Math.sin(time * frequency) * amplitude)`.
   - In `GameCanvas.vue`:
     - Pass `levelConfig.value.platformMovement` when creating the platform.
-    - In the animation loop, call `platform.update(Date.now() / 1000)` or `boatPlatform.update(Date.now() / 1000)` after `updatePhysics`.
+    - In the animation loop, call `platform.update(Date.now() / 1000)` after `updatePhysics`.
 - **Test:** Start Sea Level 3 (tilt, amplitude: 0.1). Confirm the boat rocks side-to-side. Test Space Level 3 (oscillate, x-axis), confirm the platform moves left-right.
 
 ---
