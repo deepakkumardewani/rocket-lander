@@ -44,6 +44,8 @@ export class AssetLoader {
   private loadedSeaSkyboxTextures: THREE.Texture[];
   private seaNormalTexture: THREE.Texture | null = null;
   private activeSources: Map<string, AudioBufferSourceNode>;
+  private modelUrlToKeyMap: Map<string, string> = new Map();
+  private modelUrlMap: Map<string, string> = new Map();
 
   constructor() {
     this.textures = new Map();
@@ -138,6 +140,9 @@ export class AssetLoader {
 
   // Load a 3D model and store it in the models map
   private loadModel(url: string, key: string): Promise<LoadedAsset> {
+    // Track URL to key mapping for caching
+    this.modelUrlToKeyMap.set(url, key);
+
     return new Promise((resolve, reject) => {
       this.modelLoader.load(
         url,
@@ -409,6 +414,7 @@ export class AssetLoader {
 
       // Wait for all textures to load
       this.loadedSkyboxTextures = await Promise.all(promises);
+      console.log("Skybox textures loaded successfully");
       return this.loadedSkyboxTextures;
     } catch (error) {
       handleAssetError(
@@ -426,7 +432,7 @@ export class AssetLoader {
   async loadStarTexture(): Promise<THREE.Texture> {
     try {
       const starTexture = await this.textureLoader.loadAsync(
-        "/src/assets/textures/stars/star.svg"
+        "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085497/rocket-lander/textures/stars/star_tczpie.svg"
       );
 
       // Configure texture for optimal star appearance
@@ -447,33 +453,51 @@ export class AssetLoader {
   }
 
   // Load platform textures (metal and neon)
-  async loadPlatformTextures(): Promise<Map<string, THREE.Texture>> {
+  async loadSpacePlatformTextures(): Promise<Map<string, THREE.Texture>> {
     try {
       // Load all platform textures
-      const texturePaths = [
-        "/src/assets/textures/platform/metallic.png",
-        "/src/assets/textures/platform/metallic_1.png",
-        "/src/assets/textures/platform/metallic_2.png",
-        "/src/assets/textures/platform/metallic_3.png",
-        "/src/assets/textures/platform/gold.png",
-        "/src/assets/textures/platform/neon.png",
-        "/src/assets/textures/platform/night_sky.png",
-        "/src/assets/textures/platform/platform_1.png",
+      const textures = [
+        {
+          key: "metallic",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/platform/metallic_srmsbz.jpg",
+        },
+        {
+          key: "metallic_1",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/metallic_1_slnhbg.jpg",
+        },
+        {
+          key: "metallic_2",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085501/rocket-lander/textures/platform/metallic_2_rccd4n.jpg",
+        },
+        {
+          key: "metallic_3",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/metallic_3_uxp7te.jpg",
+        },
+        {
+          key: "gold",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/platform/gold_ffg9ej.jpg",
+        },
+        {
+          key: "neon",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/neon_ejbfzn.jpg",
+        },
+        {
+          key: "night_sky",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085501/rocket-lander/textures/platform/night_sky_uab4f6.jpg",
+        },
+        {
+          key: "platform_1",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/platform_1_tafwy8.jpg",
+        },
       ];
 
       const platformTextures = await Promise.all(
-        texturePaths.map((path) => this.textureLoader.loadAsync(path))
+        textures.map((texture) => this.textureLoader.loadAsync(texture.url))
       );
-      // Store textures in the map with their corresponding keys
-      this.textures.set("metallic", platformTextures[0]);
-      this.textures.set("metallic_1", platformTextures[1]);
-      this.textures.set("metallic_2", platformTextures[2]);
-      this.textures.set("metallic_3", platformTextures[3]);
-      this.textures.set("gold", platformTextures[4]);
-      this.textures.set("neon", platformTextures[5]);
-      this.textures.set("night_sky", platformTextures[6]);
-      this.textures.set("platform_1", platformTextures[7]);
-
+      textures.forEach((texture, index) => {
+        this.textures.set(texture.key, platformTextures[index]);
+      });
+      console.log("Space platform textures loaded successfully");
       return this.textures;
     } catch (error) {
       handleAssetError(
@@ -485,24 +509,45 @@ export class AssetLoader {
   }
 
   // Load boat textures
-  async loadBoatTextures(): Promise<Map<string, THREE.Texture>> {
+  async loadSeaPlatformTextures(): Promise<Map<string, THREE.Texture>> {
     try {
       // Load all boat textures
-      const texturePaths = [
-        "/src/assets/textures/boat/vintage.jpg",
-        "/src/assets/textures/boat/boat_1.jpg",
-        "/src/assets/textures/boat/boat_2.jpg",
-        "/src/assets/textures/boat/boat_3.png",
+      const textures = [
+        {
+          key: "vintage",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/boat/vintage_auf2gz.jpg",
+        },
+        {
+          key: "boat_1",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_1_k1eghe.jpg",
+        },
+        {
+          key: "boat_2",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_2_iquqno.jpg",
+        },
+        {
+          key: "boat_3",
+          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085497/rocket-lander/textures/boat/boat_3_itdza8.jpg",
+        },
       ];
+      // const texturePaths = [
+      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/boat/vintage_auf2gz.jpg",
+      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_1_k1eghe.jpg",
+      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_2_iquqno.jpg",
+      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085497/rocket-lander/textures/boat/boat_3_itdza8.jpg",
+      // ];
       const boatTextures = await Promise.all(
-        texturePaths.map((path) => this.textureLoader.loadAsync(path))
+        textures.map((texture) => this.textureLoader.loadAsync(texture.url))
       );
 
+      textures.forEach((texture, index) => {
+        this.textures.set(texture.key, boatTextures[index]);
+      });
       // Store textures in the map with their corresponding keys
-      this.textures.set("vintage", boatTextures[0]);
-      this.textures.set("boat_1", boatTextures[1]);
-      this.textures.set("boat_2", boatTextures[2]);
-      this.textures.set("boat_3", boatTextures[3]);
+      // this.textures.set("vintage", boatTextures[0]);
+      // this.textures.set("boat_1", boatTextures[1]);
+      // this.textures.set("boat_2", boatTextures[2]);
+      // this.textures.set("boat_3", boatTextures[3]);
 
       return this.textures;
     } catch (error) {
@@ -526,7 +571,8 @@ export class AssetLoader {
 
     try {
       // Try to load the texture from file
-      const texturePath = "/src/assets/textures/waternormals.jpg";
+      const texturePath =
+        "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/waternormals_k0yyvr.jpg";
 
       // Create a promise to handle the loading
       return new Promise((resolve) => {
@@ -699,6 +745,39 @@ export class AssetLoader {
       });
     } catch (error) {
       console.error("Failed to load cloud texture", error);
+      throw error;
+    }
+  }
+
+  // Check if a model URL is already loaded and return its key
+  public isModelLoaded(url: string): string | null {
+    return this.modelUrlToKeyMap.get(url) || null;
+  }
+
+  /**
+   * Get or load a model by URL
+   * @param url URL of the model to load
+   * @param key Optional key to cache the model under
+   * @returns Promise resolving to the loaded model
+   */
+  public async getOrLoadModelByUrl(
+    url: string,
+    key: string
+  ): Promise<THREE.Object3D> {
+    try {
+      // Always load the model fresh to ensure we get the latest version
+      const result = await this.loadModel(url, key);
+      const model = result.data as THREE.Object3D;
+
+      // Store in model cache
+      this.models.set(key, model);
+      this.modelUrlToKeyMap.set(url, key);
+      // Store URL for key mapping
+      this.modelUrlMap.set(key, url);
+
+      return model;
+    } catch (error) {
+      console.error(`Failed to load model from URL ${url}:`, error);
       throw error;
     }
   }
