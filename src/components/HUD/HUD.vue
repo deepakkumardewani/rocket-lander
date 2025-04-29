@@ -6,6 +6,7 @@ import FuelGauge from "./FuelGauge.vue";
 import GameResults from "./GameResults.vue";
 import ControlsHint from "./ControlsHint.vue";
 import ZoomControl from "./ZoomControl.vue";
+import RocketSelector from "./RocketSelector.vue";
 import { ref } from "vue";
 
 // Define props
@@ -29,8 +30,9 @@ defineExpose({
 
 <template>
   <div
-    class="absolute bottom-5 right-5 w-80 flex flex-col gap-4 font-mono text-white text-shadow"
+    class="absolute bottom-5 right-5 w-[350px] flex flex-col gap-4 font-mono text-white text-shadow"
   >
+    <RocketSelector />
     <LevelInfoBar />
     <StatusBar />
     <FuelGauge />

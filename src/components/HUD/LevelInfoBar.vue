@@ -12,16 +12,16 @@ const levelObjective = computed(() => {
   if (!environment.value || !currentLevel.value) return "Land safely";
 
   const platformName = environment.value === "sea" ? "Boat" : "Platform";
-
-  if (environment.value === "space" && currentLevel.value === 4) {
-    return "Avoid asteroids, land on platform";
-  } else if (environment.value === "sea" && currentLevel.value === 4) {
-    return "Land on the green platform";
-  } else if (environment.value === "sea" && currentLevel.value === 5) {
-    return "Land safely in low visibility";
-  } else {
-    return `Land safely on the ${platformName}`;
-  }
+  return `Land safely on the ${platformName}`;
+  // if (environment.value === "space" && currentLevel.value === 4) {
+  //   return "Avoid asteroids, land on platform";
+  // } else if (environment.value === "sea" && currentLevel.value === 4) {
+  //   return "Land on the green platform";
+  // } else if (environment.value === "sea" && currentLevel.value === 5) {
+  //   return "Land safely in low visibility";
+  // } else {
+  //   return `Land safely on the ${platformName}`;
+  // }
 });
 
 // Compute level details for display
@@ -46,7 +46,7 @@ const levelDetails = computed(() => {
     class="flex flex-col gap-2 bg-[rgba(23,23,23,0.75)] backdrop-blur-md border border-white/10 rounded-lg p-1.5 px-3 shadow-lg"
   >
     <div class="flex justify-between items-center">
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
         <div
           class="px-2.5 py-1 rounded font-semibold tracking-wider text-sm text-white bg-indigo-500"
         >

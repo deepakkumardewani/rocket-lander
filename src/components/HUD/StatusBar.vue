@@ -2,10 +2,10 @@
 import { useGameStore } from "../../stores/gameStore";
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
-import type { TextureType } from "../../stores/gameStore";
-
+import type { TextureType } from "../../types/storeTypes";
+import { seaTexturesOptions, spaceTexturesOptions } from "../../lib/config";
 const gameStore = useGameStore();
-const { gameState, textureChoice, environment } = storeToRefs(gameStore);
+const { textureChoice, environment, gameState } = storeToRefs(gameStore);
 
 // Compute platform name based on environment
 const platformName = computed(() => {
@@ -15,23 +15,9 @@ const platformName = computed(() => {
 // Texture options for UI display
 const textureOptions = computed(() => {
   if (environment.value === "sea") {
-    return [
-      { value: "vintage", label: "Vintage Boat" },
-      { value: "boat_1", label: "Classic Boat" },
-      { value: "boat_2", label: "Modern Boat" },
-      { value: "boat_3", label: "Future Boat" },
-    ];
+    return seaTexturesOptions;
   } else {
-    return [
-      { value: "metallic", label: "Metallic" },
-      { value: "metallic_1", label: "Steel" },
-      { value: "metallic_2", label: "Chrome" },
-      { value: "metallic_3", label: "Iron" },
-      { value: "gold", label: "Gold" },
-      { value: "neon", label: "Neon" },
-      { value: "night_sky", label: "Night Sky" },
-      { value: "platform_1", label: "Classic" },
-    ];
+    return spaceTexturesOptions;
   }
 });
 

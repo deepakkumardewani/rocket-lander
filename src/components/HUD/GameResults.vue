@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { useGameStore } from "../../stores/gameStore";
 import { storeToRefs } from "pinia";
-import { spaceLevels, seaLevels } from "../../game/levels";
 
 const gameStore = useGameStore();
 const {
   score,
   gameState,
-  environment,
   currentLevel,
   isLevelCompleted,
   crashMetrics,
@@ -28,16 +26,22 @@ const handleNextLevel = () => {
   if (currentLevel.value < totalLevels.value) {
     // Set the next level
     gameStore.setCurrentLevel(currentLevel.value + 1);
-
     // Reset game state with a resetRocket flag to ensure the rocket gets repositioned
-    gameStore.resetGame(true);
+    gameStore.resetGame();
   }
 };
 
 // Function to replay current level
 const handleReplay = () => {
   // Reset game state - this will set it back to "waiting" state
-  gameStore.resetGame(true);
+  gameStore.resetGame();
+};
+
+const handleRestartGame = () => {
+  // Set back to level 1
+  gameStore.setCurrentLevel(1);
+  // Reset game state
+  gameStore.resetGame();
 };
 </script>
 
@@ -56,31 +60,61 @@ const handleReplay = () => {
         <span class="text-xl font-bold tabular-nums">{{ score }}</span>
       </div>
 
+      <div
+        v-if="isLevelCompleted && currentLevel === totalLevels"
+        class="text-purple-400 font-semibold py-2 text-center"
+      >
+        All Levels Completed!
+      </div>
       <!-- Add level progression controls -->
-      <div class="flex gap-2 mt-4">
+      <div class="flex flex-row gap-2 mt-4">
         <button
-          v-if="
-            isLevelCompleted &&
-            currentLevel <
-              (environment === 'space' ? spaceLevels.length : seaLevels.length)
-          "
+          v-if="isLevelCompleted && currentLevel < totalLevels"
           @click="handleNextLevel"
-          class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition-colors"
+          class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded transition-colors"
         >
-          Next Level
+          Next Level [N]
         </button>
         <button
-          v-else-if="isLevelCompleted"
-          class="flex-1 bg-purple-500 text-white font-semibold py-2 px-4 rounded opacity-90 cursor-not-allowed"
+          v-else
+          @click="handleRestartGame"
+          class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded transition-colors"
         >
-          All Levels Completed
+          Restart Game
         </button>
         <button
           @click="handleReplay"
           class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded transition-colors"
         >
-          Replay
+          Replay [R]
         </button>
+        <template v-if="isLevelCompleted && currentLevel === totalLevels">
+          <!-- <div class="text-purple-400 font-semibold py-2 text-center">
+            All Levels Completed!
+          </div> -->
+          <div class="flex gap-2">
+            <!-- <button
+              @click="handleRestartGame"
+              class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-semibold py-2 px-4 rounded transition-colors"
+            >
+              Restart Game
+            </button> -->
+            <!-- <button
+              @click="handleReplay"
+              class="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded transition-colors"
+            >
+              Replay [R]
+            </button> -->
+          </div>
+        </template>
+
+        <!-- <button
+          v-else
+          @click="handleReplay"
+          class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded transition-colors"
+        >
+          Replay [R]
+        </button> -->
       </div>
     </div>
 
@@ -110,7 +144,7 @@ const handleReplay = () => {
           @click="handleReplay"
           class="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded transition-colors"
         >
-          Retry
+          Retry [R]
         </button>
       </div>
     </div>
