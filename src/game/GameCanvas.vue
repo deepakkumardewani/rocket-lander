@@ -4,7 +4,7 @@ import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { SceneManager } from "./sceneManager";
 import { Rocket } from "./Rocket";
-import { Platform } from "./space/Platform";
+import { Platform } from "./Platform";
 import { Obstacle } from "./space/Obstacle";
 import {
   updatePhysics,
@@ -34,12 +34,19 @@ import { Terrain } from "./space/Terrain";
 import { SeaSurface } from "./sea/SeaSurface";
 import { spaceLevels, seaLevels } from "./levels";
 import type { LevelConfig } from "./levels";
-
+import {
+  LANDING_SOUND_VELOCITY_THRESHOLD,
+  THRUST_FORCE,
+  FUEL_CONSUMPTION_RATE,
+  ROTATION_SPEED,
+  ROTATION_DAMPING,
+} from "../constants";
 // Define emits
 const emit = defineEmits<{
   (e: "game-end"): void;
 }>();
 
+const isDevelopment = import.meta.env.DEV;
 const gameStore = useGameStore();
 
 // Create refs for the scene elements
@@ -49,7 +56,6 @@ const loadingProgress = ref(0);
 let sceneManager: SceneManager | null = null;
 let rocket: Rocket | null = null;
 let platform: Platform | null = null;
-// let boatPlatform: BoatPlatform | null = null;
 let terrain: Terrain | null = null;
 let seaSurface: SeaSurface | null = null;
 let animationFrameId: number | null = null;
@@ -72,13 +78,13 @@ let obstacles: Obstacle[] = [];
 // Sound state tracking
 let isThrusterSoundPlaying = false;
 let lastRocketVelocityY = 0;
-const LANDING_SOUND_VELOCITY_THRESHOLD = -2; // Velocity threshold to play landing sound
+// const LANDING_SOUND_VELOCITY_THRESHOLD = -2; // Velocity threshold to play landing sound
 
-// Constants for game physics
-const THRUST_FORCE = 15; // Force magnitude for rocket thrust
-const FUEL_CONSUMPTION_RATE = -0.05; // Fuel consumed per frame when thrusting (reduced from -0.5)
-const ROTATION_SPEED = 1; // Angular velocity for rotation (radians/second)
-const ROTATION_DAMPING = 0.95; // Damping factor for rotation
+// // Constants for game physics
+// const THRUST_FORCE = 15; // Force magnitude for rocket thrust
+// const FUEL_CONSUMPTION_RATE = -0.05; // Fuel consumed per frame when thrusting (reduced from -0.5)
+// const ROTATION_SPEED = 1; // Angular velocity for rotation (radians/second)
+// const ROTATION_DAMPING = 0.95; // Damping factor for rotation
 
 // Get the current level configuration based on environment and level
 const levelConfig = computed<LevelConfig | null>(() => {
@@ -105,10 +111,24 @@ const resetCamera = () => {
   const startPosition = sceneManager.camera.position.clone();
   const startTarget = sceneManager.controls.target.clone();
   const startTime = performance.now();
-  const duration = 2000; // 1 second transition
+  const duration = 2000; // 2 second transition
+
+  // Calculate zoomed position for space environment
+  let targetPosition;
+  let targetLookAt;
+
+  if (gameStore.environment === "space") {
+    // Move camera closer and higher for better view in space
+    targetPosition = new THREE.Vector3(0, 25, 35);
+    targetLookAt = new THREE.Vector3(0, 5, 0);
+  } else {
+    // Use default positions for sea environment
+    targetPosition = defaultCameraPosition;
+    targetLookAt = defaultCameraTarget;
+  }
 
   const animateCameraReset = () => {
-    if (!sceneManager || !defaultCameraPosition || !defaultCameraTarget) return;
+    if (!sceneManager) return;
 
     const elapsed = performance.now() - startTime;
     const progress = Math.min(elapsed / duration, 1);
@@ -119,15 +139,11 @@ const resetCamera = () => {
     // Interpolate position and target
     sceneManager.camera.position.lerpVectors(
       startPosition,
-      defaultCameraPosition,
+      targetPosition,
       eased
     );
 
-    sceneManager.controls.target.lerpVectors(
-      startTarget,
-      defaultCameraTarget,
-      eased
-    );
+    sceneManager.controls.target.lerpVectors(startTarget, targetLookAt, eased);
 
     // Update controls and projection
     sceneManager.controls.update();
@@ -148,40 +164,45 @@ const easeOutCubic = (x: number): number => {
 // Function to load all game assets
 const loadGameAssets = async (): Promise<void> => {
   try {
-    // Define assets to load
+    // Define audio assets to load
     const assetsToLoad = [
-      {
-        type: AssetType.MODEL,
-        url: "/src/assets/models/rocket.glb",
-        key: "rocket",
-      },
       // Add sound effects
       {
         type: AssetType.AUDIO,
-        url: "/src/assets/sounds/rocket-thrust.mp3",
+        url: "https://res.cloudinary.com/ddzuitkzt/video/upload/v1745085484/rocket-lander/sounds/rocket_thrust.m4a",
         key: "rocket-thrust",
       },
       {
         type: AssetType.AUDIO,
-        url: "/src/assets/sounds/rocket-landing.mp3",
+        url: "https://res.cloudinary.com/ddzuitkzt/video/upload/v1745085484/rocket-lander/sounds/rocket-landing.mp3",
         key: "rocket-landing",
       },
       {
         type: AssetType.AUDIO,
-        url: "/src/assets/sounds/missile-explosion.mp3",
+        url: "https://res.cloudinary.com/ddzuitkzt/video/upload/v1745085484/rocket-lander/sounds/missile_explosion.mp3",
         key: "missile-explosion",
       },
     ];
+    // Initialize variables
+    // let seaNormalMap: THREE.Texture | null = null; await assetLoader.loadSeaNormalTexture();
 
-    // Add sea environment specific audio if in sea environment
     if (gameStore.environment === "sea") {
+      await assetLoader.loadSeaPlatformTextures();
       assetsToLoad.push({
         type: AssetType.AUDIO,
-        url: "/src/assets/sounds/sea_waves.mp3",
+        url: "https://res.cloudinary.com/ddzuitkzt/video/upload/v1745085484/rocket-lander/sounds/sea_waves.mp3",
         key: "sea-waves",
+      });
+      assetsToLoad.push({
+        type: AssetType.AUDIO,
+        url: "https://res.cloudinary.com/ddzuitkzt/video/upload/v1745085484/rocket-lander/sounds/wind.mp3",
+        key: "wind",
       });
     }
 
+    if (gameStore.environment === "space") {
+      await assetLoader.loadSpacePlatformTextures();
+    }
     // Set up loading manager progress tracking
     assetLoader.loadingManager.onProgress = (_, itemsLoaded, itemsTotal) => {
       loadingProgress.value = Math.round((itemsLoaded / itemsTotal) * 100);
@@ -192,8 +213,11 @@ const loadGameAssets = async (): Promise<void> => {
     // We'll initialize it here for loading, but it won't produce sound until user interacts
     assetLoader.initAudioContext();
 
-    // Load all assets
+    // Load all audio assets
     await assetLoader.loadAssets(assetsToLoad);
+
+    // Load or get rocket model using caching
+    await assetLoader.getOrLoadModelByUrl(gameStore.rocketModelUrl, "rocket");
 
     // Log level configuration for testing
     if (levelConfig.value) {
@@ -204,42 +228,10 @@ const loadGameAssets = async (): Promise<void> => {
       );
     }
 
-    // Load platform textures
-    await assetLoader.loadPlatformTextures();
-
-    // Initialize variables
-    let seaNormalMap: THREE.Texture | null = null;
-
-    // Load boat textures if in sea environment
-    if (gameStore.environment === "sea") {
-      await assetLoader.loadBoatTextures();
-      // Load sea normal map texture for enhanced water detail
-      seaNormalMap = await assetLoader.loadSeaNormalTexture();
-    }
-
-    // Load skybox textures (both space and sea)
-    const spaceTextures = await assetLoader.loadSkyboxTextures();
-
-    // Load star texture
-    const starTexture = await assetLoader.loadStarTexture();
-
-    // Get the current texture based on environment and texture choice
-    const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
-    if (!currentTexture) {
-      throw new Error(`Failed to load texture: ${gameStore.textureChoice}`);
-    }
-
     // Assets loaded successfully
     isLoading.value = false;
-    // console.log("All assets loaded successfully");
 
-    // Initialize the game scene with the current texture
-    initializeGameScene(
-      spaceTextures,
-      starTexture,
-      currentTexture,
-      seaNormalMap
-    );
+    initializeGameScene();
   } catch (error) {
     handleAssetError(
       "Failed to load game assets",
@@ -250,12 +242,7 @@ const loadGameAssets = async (): Promise<void> => {
 };
 
 // Initialize game objects and start the animation loop
-const initializeGameScene = (
-  spaceTextures: THREE.Texture[],
-  starTexture: THREE.Texture,
-  boatTexture: THREE.Texture | null = null,
-  seaNormalMap: THREE.Texture | null = null
-) => {
+const initializeGameScene = async () => {
   if (!canvasContainer.value) return;
 
   try {
@@ -278,12 +265,24 @@ const initializeGameScene = (
       gameStore.updateFuel(levelConfig.value.startingFuel - 100); // Adjust from default 100
     }
 
+    // Get the current texture based on environment and texture choice
+    const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
+    if (!currentTexture) {
+      throw new Error(`Failed to load texture: ${gameStore.textureChoice}`);
+    }
+
     // Create skybox based on environment
     if (gameStore.environment === "space") {
+      // Load skybox textures (both space and sea)
+      const spaceTextures = await assetLoader.loadSkyboxTextures();
+
+      // Load star texture
+      const starTexture = await assetLoader.loadStarTexture();
+
       sceneManager.createSkybox(spaceTextures);
 
       // Get the current texture choice from game store
-      const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
+      // const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
 
       // Create a dynamic star field
       sceneManager.createStarField({
@@ -341,6 +340,7 @@ const initializeGameScene = (
       terrain = new Terrain();
       sceneManager.scene.add(terrain.getMesh());
 
+      console.log(levelConfig.value);
       platform = new Platform({
         width: levelConfig.value?.platformWidth || 5,
         depth: levelConfig.value?.platformDepth || 5,
@@ -349,16 +349,16 @@ const initializeGameScene = (
       platform.addToScene(sceneManager.scene);
     } else if (gameStore.environment === "sea") {
       // Get the current texture choice from game store
-      const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
+      // const currentTexture = assetLoader.getTexture(gameStore.textureChoice);
 
       // Create the dynamic sky with atmospheric scattering
       sceneManager.createSky({
-        turbidity: 1.2, // Reduced for clearer, softer sky
-        rayleigh: 2.0, // Increased for stronger blue scatter in upper sky
-        mieCoefficient: 0.015, // Adjusted for sunset-like scattering
-        mieDirectionalG: 0.85, // Increased for stronger horizon effects
-        elevation: 5, // Very low sun position for horizon colors
-        azimuth: 180, // Keep sun position
+        turbidity: 2.0, // Increased from 1.2 for hazier sky
+        rayleigh: 1.0, // Decreased from 2.0 for less blue scatter
+        mieCoefficient: 0.005, // Decreased from 0.015 for less sun glare
+        mieDirectionalG: 0.75, // Decreased from 0.85 for less concentrated sun glare
+        elevation: 2, // Lower sun position (reduced from 5)
+        azimuth: 0, // Move sun behind camera
       });
 
       // Add ambient light with soft intensity for pastel look
@@ -367,7 +367,7 @@ const initializeGameScene = (
       sceneManager.scene.add(ambientLight);
 
       // Add directional light with warm color for horizon glow
-      const directionalLight = new THREE.DirectionalLight(0xffeddb, 0.4); // Warm peach color
+      const directionalLight = new THREE.DirectionalLight(0xffeddb, 0.2); // Reduced from 0.4 to 0.2
       directionalLight.position.copy(sceneManager.getSunPosition());
       sceneManager.scene.add(directionalLight);
 
@@ -383,7 +383,7 @@ const initializeGameScene = (
       platform = new Platform({
         width: levelConfig.value?.platformWidth || 10,
         depth: levelConfig.value?.platformDepth || 20,
-        texture: boatTexture || currentTexture,
+        texture: currentTexture,
         color: 0x8b4513,
       });
       platform.addToScene(sceneManager.scene);
@@ -409,6 +409,8 @@ const initializeGameScene = (
       // Update the cube camera to capture the initial scene with clouds and boat
       sceneManager.updateCubeCamera();
 
+      let seaNormalMap: THREE.Texture | null =
+        await assetLoader.loadSeaNormalTexture();
       // Then create sea surface with the reflection map
       seaSurface = new SeaSurface({
         size: 10000, // Large sea surface
@@ -443,11 +445,6 @@ const initializeGameScene = (
     // Initially set rocket to static in waiting mode
     if (gameStore.gameState === "waiting") {
       rocket.getBody().type = CANNON.Body.STATIC;
-    }
-
-    // Create obstacles based on level configuration
-    if (levelConfig.value?.obstacles) {
-      createObstacles(levelConfig.value.obstacles);
     }
 
     // Set up collision detection between rocket and platform
@@ -517,56 +514,6 @@ const initializeGameScene = (
       };
     }
 
-    // Watch for texture choice changes to update platform
-    watch(
-      () => gameStore.textureChoice,
-      (newTextureChoice) => {
-        const texture = assetLoader.getTexture(newTextureChoice);
-        if (!texture) return;
-
-        if (gameStore.environment === "space" && platform) {
-          platform.updateTexture(texture);
-        } else if (gameStore.environment === "sea" && platform) {
-          platform.updateTexture(texture);
-        }
-      }
-    );
-
-    // Watch for game state changes to handle sound effects
-    watch(
-      () => gameStore.gameState,
-      (newState) => {
-        // Stop thruster sound when game state changes to landed or crashed
-        if (newState === "landed" || newState === "crashed") {
-          if (isThrusterSoundPlaying) {
-            assetLoader.stopAudio("rocket-thrust");
-            isThrusterSoundPlaying = false;
-          }
-        }
-      }
-    );
-
-    // Fix the shouldResetRocket flag access through the store
-    watch(
-      () => gameStore.shouldResetRocket,
-      (shouldReset) => {
-        if (shouldReset && rocket) {
-          // Reset rocket position and orientation
-          const rocketBody = rocket.getBody();
-          rocketBody.position.set(0, 15, 0); // Match the new starting height
-          rocketBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0);
-          rocketBody.velocity.set(0, 0, 0);
-          rocketBody.angularVelocity.set(0, 0, 0);
-
-          // Set rocket to static body type in waiting state
-          rocketBody.type = CANNON.Body.STATIC;
-
-          // Reset the flag after handling it
-          gameStore.setResetRocketFlag(false);
-        }
-      }
-    );
-
     // Animation loop
     const animate = withErrorHandling(
       () => {
@@ -582,6 +529,11 @@ const initializeGameScene = (
 
         // Increment frame counter
         frameCount++;
+
+        // Ensure input handler is initialized
+        if (!inputHandler.isInitialized()) {
+          inputHandler.reset();
+        }
 
         // Update physics world - using original interface to avoid errors
         updatePhysics(clampedDeltaTime);
@@ -624,7 +576,9 @@ const initializeGameScene = (
 
         // Update particle systems
         if (rocket) {
-          rocket.getThrusterParticles().update(clampedDeltaTime);
+          rocket.getThrusterParticles().forEach((particles) => {
+            particles.update(clampedDeltaTime);
+          });
         }
 
         // Update crash particles if they exist
@@ -657,12 +611,41 @@ const initializeGameScene = (
     const processInput = () => {
       if (!rocket) return;
 
+      // Check for next level key when landed
+      if (
+        gameStore.gameState === "landed" &&
+        inputHandler.isNextLevelPressed()
+      ) {
+        if (gameStore.currentLevel < gameStore.totalLevels) {
+          // Set the next level
+          gameStore.setCurrentLevel(gameStore.currentLevel + 1);
+          // Reset game state with resetRocket flag
+          gameStore.resetGame();
+        }
+        return;
+      }
+
       // Check for reset first, regardless of game state
       if (inputHandler.isResetPressed()) {
-        // Reset rocket position and orientation
+        console.log("Resetting rocket");
+        // Reset rocket position and orientation using model config
         const rocketBody = rocket.getBody();
-        rocketBody.position.set(0, 15, 0); // Match the new starting height
-        rocketBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0);
+        const modelConfig = rocket.getModelConfig();
+        rocketBody.position.set(
+          modelConfig.position.x,
+          modelConfig.position.y,
+          modelConfig.position.z
+        );
+
+        const rotation = modelConfig.rotation;
+        const quaternion = new THREE.Quaternion().setFromEuler(rotation);
+        rocketBody.quaternion.set(
+          quaternion.x,
+          quaternion.y,
+          quaternion.z,
+          quaternion.w
+        );
+        // rocketBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0);
         rocketBody.velocity.set(0, 0, 0);
         rocketBody.angularVelocity.set(0, 0, 0);
 
@@ -688,14 +671,36 @@ const initializeGameScene = (
 
       // Waiting for space to start the game
       if (gameStore.gameState === "waiting") {
-        if (inputHandler.isKeyPressed(" ")) {
+        // Check for space key press using isKeyDown instead of isKeyPressed
+        if (inputHandler.isKeyDown(" ")) {
+          console.log("Space key detected in waiting state");
           // Transition to pre-launch state
           gameStore.setGameState("pre-launch");
-        }
 
-        // While in waiting state, make the rocket static (not affected by gravity)
-        const rocketBody = rocket.getBody();
-        rocketBody.type = CANNON.Body.STATIC;
+          // Make sure the rocket is static and in correct position
+          const rocketBody = rocket.getBody();
+          const modelConfig = rocket.getModelConfig();
+          rocketBody.type = CANNON.Body.STATIC;
+          rocketBody.position.set(
+            modelConfig.position.x,
+            modelConfig.position.y,
+            modelConfig.position.z
+          );
+          const rotation = modelConfig.rotation;
+          const quaternion = new THREE.Quaternion().setFromEuler(rotation);
+          rocketBody.quaternion.set(
+            quaternion.x,
+            quaternion.y,
+            quaternion.z,
+            quaternion.w
+          );
+          // rocketBody.quaternion.setFromAxisAngle(
+          //   new CANNON.Vec3(0, 180, 100),
+          //   0
+          // ); // Reset rotation
+          rocketBody.velocity.set(0, 0, 0); // Reset velocity
+          rocketBody.angularVelocity.set(0, 0, 0); // Reset angular velocity
+        }
         return;
       } else if (gameStore.gameState === "pre-launch") {
         // When in pre-launch, make the rocket dynamic again (affected by gravity)
@@ -827,15 +832,23 @@ const initializeGameScene = (
         }
       }, 8000);
 
-      // Aurora effect that pulses every 45 seconds instead of 30
+      // Aurora effect that pulses every 25
       auroraInterval = window.setInterval(() => {
         if (sceneManager) {
           sceneManager.triggerAurora(0.8, 5); // 0.8 intensity for 5 seconds
         }
-      }, 45000);
+      }, 25000);
     } else if (gameStore.environment === "sea") {
-      // Play sea waves ambient sound
+      // Play sea waves ambient sound (always play in sea environment)
       assetLoader.playAudio("sea-waves", true, 0.3); // Loop sound at 30% volume
+
+      // Play wind sound only if wind strength is greater than 0
+      if (
+        levelConfig.value?.windStrength &&
+        levelConfig.value.windStrength > 0
+      ) {
+        assetLoader.playAudio("wind", true, 0.2); // Loop wind sound at 20% volume
+      }
     }
   } catch (error) {
     handleRenderingError(
@@ -976,6 +989,151 @@ const disposeObstacles = () => {
   obstacles = [];
 };
 
+// Watch for texture choice changes to update platform
+watch(
+  () => gameStore.textureChoice,
+  (newTextureChoice) => {
+    const texture = assetLoader.getTexture(newTextureChoice);
+    if (!texture) return;
+
+    if (gameStore.environment === "space" && platform) {
+      platform.updateTexture(texture);
+    } else if (gameStore.environment === "sea" && platform) {
+      platform.updateTexture(texture);
+    }
+  }
+);
+
+// Watch for game state changes to handle sound effects
+watch(
+  () => gameStore.gameState,
+  (newState) => {
+    // Stop thruster sound when game state changes to landed or crashed
+    if (newState === "landed" || newState === "crashed") {
+      if (isThrusterSoundPlaying) {
+        assetLoader.stopAudio("rocket-thrust");
+        isThrusterSoundPlaying = false;
+      }
+    }
+  }
+);
+
+// Watch for rocket model URL changes
+watch(
+  () => gameStore.rocketModel,
+  async (newModel) => {
+    console.log("Rocket model URL changed to:", newModel);
+    if (rocket && newModel) {
+      // Load the new rocket model if needed
+      try {
+        // The model will be cached if already loaded
+        await assetLoader.getOrLoadModelByUrl(newModel.url, "rocket");
+        console.log("Successfully loaded new rocket model:", newModel.url);
+
+        // Set reset flag to true to trigger rocket recreation with new model
+        gameStore.setResetRocketFlag(true);
+      } catch (error) {
+        handleAssetError(
+          "Failed to load rocket model",
+          error instanceof Error ? error : new Error(String(error))
+        );
+      }
+    }
+  }
+);
+
+// Fix the shouldResetRocket flag access through the store
+watch(
+  () => gameStore.shouldResetRocket,
+  async (shouldReset) => {
+    if (shouldReset && sceneManager) {
+      try {
+        // Remove the old rocket from the scene and dispose it
+        if (rocket) {
+          const rocketBody = rocket.getBody();
+          const modelConfig = rocket.getModelConfig();
+
+          // Store rocket's physics properties to transfer to new rocket
+          const velocity = rocketBody.velocity.clone();
+          const angularVelocity = rocketBody.angularVelocity.clone();
+          const bodyType = rocketBody.type;
+
+          // Remove old rocket from scene
+          sceneManager.scene.remove(rocket.getMesh());
+
+          // Clean up the old rocket instance
+          rocket.dispose();
+
+          // Create a new rocket instance with the new model and its config position
+          rocket = new Rocket();
+          rocket.addToScene(sceneManager.scene);
+
+          // Copy over the previous physics state
+          const newRocketBody = rocket.getBody();
+          newRocketBody.position.set(
+            modelConfig.position.x,
+            modelConfig.position.y,
+            modelConfig.position.z
+          );
+          newRocketBody.quaternion.copy(rocketBody.quaternion);
+          newRocketBody.velocity.copy(velocity);
+          newRocketBody.angularVelocity.copy(angularVelocity);
+          newRocketBody.type = bodyType;
+
+          // Reestablish collision handlers for the new rocket
+          if (platform && cleanupCollisionHandlers) {
+            cleanupCollisionHandlers();
+
+            cleanupCollisionHandlers = registerCollisionHandlers(
+              rocket.getBody(),
+              platform.getBody(),
+              // Add callback for successful landing
+              () => {
+                // Play landing sound when successfully landed
+                assetLoader.playAudio("rocket-landing", false, 0.7);
+              },
+              // Add callback for crash
+              () => {
+                assetLoader.playAudio("missile-explosion", false, 0.8);
+              }
+            );
+
+            // Add crash particles to the scene
+            const crashParticles = getCrashParticles();
+            if (crashParticles) {
+              sceneManager.scene.add(crashParticles.getMesh());
+            }
+          }
+
+          // If we have a terrain in space environment, recreate that collision handler too
+          if (terrain && gameStore.environment === "space") {
+            const terrainCleanup = registerCollisionHandlers(
+              rocket.getBody(),
+              terrain.getBody(),
+              undefined, // No successful landing on terrain
+              () => {
+                // Play explosion sound when crashing into terrain
+                assetLoader.playAudio("missile-explosion", false, 0.8);
+              }
+            );
+
+            // Combine cleanup functions if needed
+            const previousCleanup = cleanupCollisionHandlers;
+            cleanupCollisionHandlers = () => {
+              if (previousCleanup) previousCleanup();
+              terrainCleanup();
+            };
+          }
+        }
+      } catch (error) {
+        console.error("Error recreating rocket:", error);
+      }
+
+      // Reset the flag after handling it
+      gameStore.setResetRocketFlag(false);
+    }
+  }
+);
 // Watch for hudRef changes to properly connect it to SceneManager
 watch(
   hudRef,
@@ -992,6 +1150,31 @@ watch(
   () => gameStore.gameState,
   (newState, oldState) => {
     if (!sceneManager) return;
+
+    // Reset rocket position when state changes to waiting
+    if (newState === "waiting" && rocket) {
+      const rocketBody = rocket.getBody();
+      const modelConfig = rocket.getModelConfig();
+      rocketBody.type = CANNON.Body.STATIC;
+      rocketBody.position.set(
+        modelConfig.position.x,
+        modelConfig.position.y,
+        modelConfig.position.z
+      );
+      const rotation = modelConfig.rotation;
+      const quaternion = new THREE.Quaternion().setFromEuler(rotation);
+      rocketBody.quaternion.set(
+        quaternion.x,
+        quaternion.y,
+        quaternion.z,
+        quaternion.w
+      );
+      // rocketBody.position.set(5, 15, 0);
+      // rocketBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 0, 1), 0);
+      rocketBody.velocity.set(0, 0, 0);
+      rocketBody.angularVelocity.set(0, 0, 0);
+      rocketBody.type = CANNON.Body.STATIC;
+    }
 
     // If transitioning to flying state, reset the camera
     if (newState === "flying" && oldState !== "flying") {
@@ -1077,6 +1260,7 @@ watch(
         platform = new Platform({
           width: levelConfig.value?.platformWidth || 10,
           depth: levelConfig.value?.platformDepth || 20,
+          color: 0x8b4513,
           texture: currentTexture,
         });
 
@@ -1127,6 +1311,8 @@ watch(
 // Start loading process when the component is mounted
 onMounted(() => {
   gameStore.setCurrentLevel(1);
+  // Explicitly ensure the inputHandler is initialized and reset
+  inputHandler.reset();
   loadGameAssets();
 });
 
@@ -1197,6 +1383,7 @@ onUnmounted(() => {
     // Stop any playing audio
     assetLoader.stopAudio("rocket-thrust");
     assetLoader.stopAudio("sea-waves");
+    assetLoader.stopAudio("wind");
     assetLoader.dispose();
   }
 
@@ -1206,6 +1393,45 @@ onUnmounted(() => {
   // Emit game end event
   emit("game-end");
 });
+
+// Function to adjust sun and lighting settings at runtime
+const adjustSunSettings = (
+  elevation = 2,
+  intensity = 0.2,
+  mieCoefficient = 0.005
+) => {
+  if (!sceneManager) return;
+
+  // Adjust sky parameters if in sea environment
+  if (gameStore.environment === "sea") {
+    // Update sky parameters using scene manager's public method
+    sceneManager.createSky({
+      turbidity: 2.0,
+      rayleigh: 1.0,
+      mieCoefficient,
+      mieDirectionalG: 0.75,
+      elevation,
+      azimuth: 0,
+    });
+
+    // Update directional light
+    sceneManager.scene.children.forEach((child) => {
+      if (child instanceof THREE.DirectionalLight) {
+        child.intensity = intensity;
+      }
+    });
+
+    console.log(
+      `Sun adjusted: elevation=${elevation}, intensity=${intensity}, mie=${mieCoefficient}`
+    );
+  }
+};
+
+// Export the function to make it available through refs
+defineExpose({ adjustSunSettings });
+
+// Increment frame counter
+frameCount++;
 </script>
 
 <template>
@@ -1221,23 +1447,24 @@ onUnmounted(() => {
       Press Space to Start
     </div>
 
-    <!-- Back to Selection Button -->
-    <div v-if="!isLoading" class="back-button" @click="emit('game-end')">
-      Select Environment
-    </div>
-
     <!-- HUD -->
     <HUD
       v-if="!isLoading && sceneManager"
       ref="hudRef"
       :scene-manager="sceneManager"
     />
+    <div class="flex items-center space-x-4 absolute top-2 left-2 w-full">
+      <!-- Effects Panel Component -->
+      <EffectsPanel
+        v-if="!isLoading && sceneManager && isDevelopment"
+        :scene-manager="sceneManager"
+      />
 
-    <!-- Effects Panel Component -->
-    <EffectsPanel
-      v-if="!isLoading && sceneManager"
-      :scene-manager="sceneManager"
-    />
+      <!-- Back to Selection Button -->
+      <div v-if="!isLoading" class="back-button" @click="emit('game-end')">
+        Change Environment
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1280,26 +1507,43 @@ onUnmounted(() => {
 }
 
 .back-button {
-  position: absolute;
+  /* position: absolute;
   top: 20px;
-  right: 20px;
-  background-color: rgba(0, 0, 0, 0.6);
+  left: 20px; */
+  background-color: rgba(0, 0, 0, 0.7);
   color: white;
-  padding: 10px 15px;
-  border-radius: 4px;
+  padding: 8px 20px;
+  border-radius: 8px;
   cursor: pointer;
   font-family: "Arial", sans-serif;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
   z-index: 20;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: background-color 0.2s, transform 0.1s;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-button::before {
+  content: "←";
+  font-size: 1.2em;
+  line-height: 1;
 }
 
 .back-button:hover {
-  background-color: rgba(0, 0, 0, 0.8);
-  transform: scale(1.05);
+  background-color: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .back-button:active {
-  transform: scale(0.98);
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 </style>

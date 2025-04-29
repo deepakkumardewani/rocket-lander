@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
-import { useGameStore, type Environment } from "../stores/gameStore";
+import { useGameStore } from "../stores/gameStore";
+import type { Environment } from "../types/storeTypes";
 
 const gameStore = useGameStore();
 

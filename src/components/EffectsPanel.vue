@@ -139,9 +139,6 @@ onMounted(() => {
 
 <style scoped>
 .effects-panel {
-  position: absolute;
-  top: 10px;
-  left: 10px;
   background-color: rgba(10, 10, 20, 0.7);
   border-radius: 8px;
   border: 1px solid rgba(100, 120, 255, 0.4);

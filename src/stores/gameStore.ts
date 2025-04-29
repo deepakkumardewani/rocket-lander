@@ -1,55 +1,15 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { spaceLevels, seaLevels } from "../game/levels";
-
-// Game state types
-export type GameState =
-  | "waiting"
-  | "pre-launch"
-  | "flying"
-  | "landed"
-  | "crashed";
-export type TextureType =
-  // Boat textures
-  | "vintage"
-  | "boat_1"
-  | "boat_2"
-  | "boat_3"
-  // Platform textures
-  | "metallic"
-  | "metallic_1"
-  | "metallic_2"
-  | "metallic_3"
-  | "gold"
-  | "neon"
-  | "night_sky"
-  | "platform_1";
-export type Environment = "space" | "sea" | "";
-
-export interface LandingMetrics {
-  position: {
-    x: number;
-    y: number;
-    z: number;
-  };
-  velocity: {
-    x: number;
-    y: number;
-    z: number;
-  };
-}
-
-export interface GameStateValues {
-  fuel: number;
-  score: number;
-  isLanded: boolean;
-  gameState: GameState;
-  textureChoice: TextureType;
-  environment: Environment;
-  currentLevel: number;
-  isLevelCompleted: boolean;
-}
-
+import type {
+  Environment,
+  LandingMetrics,
+  RocketModel,
+  GameState,
+  TextureType,
+  GameStateValues,
+} from "../types/storeTypes";
+import { rocketModels } from "../lib/config";
 /**
  * Game state store to manage game data like fuel, score, and game state
  */
@@ -58,7 +18,7 @@ export const useGameStore = defineStore("game", () => {
   const fuel = ref<number>(100);
   const score = ref<number>(0);
   const isLanded = ref<boolean>(false);
-  const totalLevels = ref<number>(5);
+  const totalLevels = ref<number>(3);
   const gameState = ref<GameState>("waiting");
   const showGameCanvas = ref<boolean>(false);
   const textureChoice = ref<TextureType>("platform_1");
@@ -67,6 +27,8 @@ export const useGameStore = defineStore("game", () => {
   const isLevelCompleted = ref<boolean>(false);
   const crashMetrics = ref<LandingMetrics | null>(null);
   const shouldResetRocket = ref<boolean>(false);
+  const rocketModel = ref<RocketModel>(rocketModels[1]);
+  const rocketModelUrl = ref<string>(rocketModel.value.url);
 
   // Getters (computed values)
   const hasFuel = computed(() => fuel.value > 0);
@@ -128,10 +90,18 @@ export const useGameStore = defineStore("game", () => {
   }
 
   /**
-   * Update the game state
+   * Set the game state
    * @param newState - New game state
    */
   function setGameState(newState: GameState): void {
+    // Validate state transitions
+    if (newState === "pre-launch" && gameState.value !== "waiting") {
+      return; // Only allow pre-launch from waiting state
+    }
+    if (newState === "flying" && gameState.value !== "pre-launch") {
+      return; // Only allow flying from pre-launch state
+    }
+
     gameState.value = newState;
     isLanded.value = newState === "landed";
     if (newState !== "crashed") {
@@ -167,7 +137,9 @@ export const useGameStore = defineStore("game", () => {
    * Start the game from waiting state
    */
   function startGame(): void {
-    // Don't transition to pre-launch, just ensure we're in waiting state
+    // Reset game state to ensure clean start
+    resetGame();
+    // Set to waiting state and show game canvas
     gameState.value = "waiting";
     showGameCanvas.value = true;
   }
@@ -193,7 +165,7 @@ export const useGameStore = defineStore("game", () => {
    * @param resetRocket - Whether to flag the rocket for repositioning
    * @returns The reset state values
    */
-  function resetGame(resetRocket: boolean = false): GameStateValues {
+  function resetGame(): GameStateValues {
     // Get the current level configuration to set appropriate fuel
     let levelFuel = 100; // Default value
     if (environment.value === "space") {
@@ -217,7 +189,6 @@ export const useGameStore = defineStore("game", () => {
     isLanded.value = false;
     gameState.value = "waiting";
     crashMetrics.value = null;
-    shouldResetRocket.value = resetRocket;
     // Keep environment and level as is (don't reset)
 
     return {
@@ -236,7 +207,6 @@ export const useGameStore = defineStore("game", () => {
    * Reset the game completely and go back to environment selection
    */
   function resetToSelection(): void {
-    console.log("resetToSelection");
     resetGame();
     environment.value = "";
     showGameCanvas.value = false;
@@ -250,6 +220,12 @@ export const useGameStore = defineStore("game", () => {
    */
   function setResetRocketFlag(shouldReset: boolean): void {
     shouldResetRocket.value = shouldReset;
+  }
+
+  function setRocketModel(model: RocketModel): void {
+    rocketModel.value = model;
+    // Set the reset flag to true to trigger rocket model update
+    shouldResetRocket.value = true;
   }
 
   return {
@@ -266,6 +242,9 @@ export const useGameStore = defineStore("game", () => {
     crashMetrics,
     totalLevels,
     shouldResetRocket,
+    rocketModelUrl,
+    rocketModels,
+    rocketModel,
     // Getters
     hasFuel,
     canFly,
@@ -282,5 +261,6 @@ export const useGameStore = defineStore("game", () => {
     setCurrentLevel,
     markLevelCompleted,
     setResetRocketFlag,
+    setRocketModel,
   };
 });
