@@ -38,6 +38,8 @@ export interface RocketModel {
   id: string;
   name: string;
   url: string;
+  position: { x: number; y: number; z: number };
+  cameraPosition: { x: number; y: number; z: number };
 }
 export interface GameStateValues {
   fuel: number;
