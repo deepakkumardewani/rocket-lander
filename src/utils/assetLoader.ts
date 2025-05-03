@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { handleAssetError } from "./errorHandler";
-
+import { spaceTexturesOptions, seaTexturesOptions } from "../lib/config";
 // Types of assets that can be loaded
 export enum AssetType {
   TEXTURE = "texture",
@@ -456,46 +456,14 @@ export class AssetLoader {
   async loadSpacePlatformTextures(): Promise<Map<string, THREE.Texture>> {
     try {
       // Load all platform textures
-      const textures = [
-        {
-          key: "metallic",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/platform/metallic_srmsbz.jpg",
-        },
-        {
-          key: "metallic_1",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/metallic_1_slnhbg.jpg",
-        },
-        {
-          key: "metallic_2",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085501/rocket-lander/textures/platform/metallic_2_rccd4n.jpg",
-        },
-        {
-          key: "metallic_3",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/metallic_3_uxp7te.jpg",
-        },
-        {
-          key: "gold",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/platform/gold_ffg9ej.jpg",
-        },
-        {
-          key: "neon",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/neon_ejbfzn.jpg",
-        },
-        {
-          key: "night_sky",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085501/rocket-lander/textures/platform/night_sky_uab4f6.jpg",
-        },
-        {
-          key: "platform_1",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085500/rocket-lander/textures/platform/platform_1_tafwy8.jpg",
-        },
-      ];
 
       const platformTextures = await Promise.all(
-        textures.map((texture) => this.textureLoader.loadAsync(texture.url))
+        spaceTexturesOptions.map((texture) =>
+          this.textureLoader.loadAsync(texture.url)
+        )
       );
-      textures.forEach((texture, index) => {
-        this.textures.set(texture.key, platformTextures[index]);
+      spaceTexturesOptions.forEach((texture, index) => {
+        this.textures.set(texture.value, platformTextures[index]);
       });
       console.log("Space platform textures loaded successfully");
       return this.textures;
@@ -512,36 +480,15 @@ export class AssetLoader {
   async loadSeaPlatformTextures(): Promise<Map<string, THREE.Texture>> {
     try {
       // Load all boat textures
-      const textures = [
-        {
-          key: "vintage",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/boat/vintage_auf2gz.jpg",
-        },
-        {
-          key: "boat_1",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_1_k1eghe.jpg",
-        },
-        {
-          key: "boat_2",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_2_iquqno.jpg",
-        },
-        {
-          key: "boat_3",
-          url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085497/rocket-lander/textures/boat/boat_3_itdza8.jpg",
-        },
-      ];
-      // const texturePaths = [
-      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085498/rocket-lander/textures/boat/vintage_auf2gz.jpg",
-      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_1_k1eghe.jpg",
-      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085499/rocket-lander/textures/boat/boat_2_iquqno.jpg",
-      //   "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745085497/rocket-lander/textures/boat/boat_3_itdza8.jpg",
-      // ];
+
       const boatTextures = await Promise.all(
-        textures.map((texture) => this.textureLoader.loadAsync(texture.url))
+        seaTexturesOptions.map((texture) =>
+          this.textureLoader.loadAsync(texture.url)
+        )
       );
 
-      textures.forEach((texture, index) => {
-        this.textures.set(texture.key, boatTextures[index]);
+      seaTexturesOptions.forEach((texture, index) => {
+        this.textures.set(texture.value, boatTextures[index]);
       });
       // Store textures in the map with their corresponding keys
       // this.textures.set("vintage", boatTextures[0]);
