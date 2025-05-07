@@ -36,9 +36,7 @@ defineProps<{
 
       <h2 class="text-white text-2xl mb-4 font-bold">Preparing for Launch</h2>
 
-      <div class="text-[#a9c2ff] text-xl mb-6">
-        Loading game assets: {{ progress.toFixed(2) }}%
-      </div>
+      <div class="text-[#a9c2ff] text-xl mb-6">Loading game assets: {{ progress.toFixed(2) }}%</div>
 
       <div
         class="w-full h-3 bg-white/10 rounded-xl overflow-hidden shadow-[0_0_10px_rgba(169,194,255,0.3)]"

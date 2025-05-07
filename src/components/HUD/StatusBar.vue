@@ -1,23 +1,29 @@
 <script setup lang="ts">
-import { useGameStore } from "../../stores/gameStore";
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
-import type { TextureType } from "../../types/storeTypes";
+
 import { seaTexturesOptions, spaceTexturesOptions } from "../../lib/config";
+import { useGameStore } from "../../stores/gameStore";
+import type { TextureType } from "../../types/storeTypes";
+
 const gameStore = useGameStore();
-const { textureChoice, environment, gameState } = storeToRefs(gameStore);
+const { textureChoice, environment, gameState, unlockedTextures } = storeToRefs(gameStore);
 
 // Compute platform name based on environment
 const platformName = computed(() => {
   return environment.value === "sea" ? "Boat" : "Platform";
 });
 
-// Texture options for UI display
+// Filter texture options to only show unlocked ones
 const textureOptions = computed(() => {
   if (environment.value === "sea") {
-    return seaTexturesOptions;
+    return seaTexturesOptions.filter((option) =>
+      unlockedTextures.value.sea.includes(option.value as TextureType)
+    );
   } else {
-    return spaceTexturesOptions;
+    return spaceTexturesOptions.filter((option) =>
+      unlockedTextures.value.space.includes(option.value as TextureType)
+    );
   }
 });
 
@@ -45,7 +51,7 @@ const changeTexture = (event: Event) => {
           'bg-yellow-500': gameState === 'pre-launch',
           'bg-blue-500': gameState === 'flying',
           'bg-green-500': gameState === 'landed',
-          'bg-red-500': gameState === 'crashed',
+          'bg-red-500': gameState === 'crashed'
         }"
       >
         {{ gameStateLabel }}
@@ -54,20 +60,14 @@ const changeTexture = (event: Event) => {
 
     <!-- Texture selection dropdown -->
     <div class="flex items-center gap-2">
-      <label for="texture-choice" class="text-xs opacity-90"
-        >{{ platformName }}:</label
-      >
+      <label for="texture-choice" class="text-xs opacity-90">{{ platformName }}:</label>
       <select
         id="texture-choice"
         v-model="textureChoice"
         @change="changeTexture"
         class="bg-[rgba(45,45,45,0.7)] border border-white/20 text-white rounded px-1.5 py-0.5 text-xs cursor-pointer outline-none focus:border-indigo-500/80 focus:shadow-[0_0_0_2px_rgba(99,102,241,0.2)]"
       >
-        <option
-          v-for="option in textureOptions"
-          :key="option.value"
-          :value="option.value"
-        >
+        <option v-for="option in textureOptions" :key="option.value" :value="option.value">
           {{ option.label }}
         </option>
       </select>

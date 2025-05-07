@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
+
 import { useGameStore } from "../stores/gameStore";
 import type { Environment } from "../types/storeTypes";
 
@@ -41,7 +42,6 @@ const animateStars = () => {
     // Update star position
     x = (x - speed) % 100;
     if (x < 0) x = 100 + x;
-
     (star as HTMLElement).style.left = `${x}%`;
   });
 
@@ -98,13 +98,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    class="relative flex flex-col items-center justify-center h-full w-full overflow-hidden"
-  >
+  <div class="relative flex flex-col items-center justify-center h-full w-full overflow-hidden">
     <!-- Animated background -->
-    <div
-      class="absolute inset-0 bg-gradient-to-b from-purple-900 via-blue-900 to-black"
-    ></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-purple-900 via-blue-900 to-black"></div>
 
     <!-- Star field -->
     <div ref="starsRef" class="absolute inset-0 overflow-hidden">
@@ -128,9 +124,7 @@ onUnmounted(() => {
       </h1>
 
       <div class="mb-8 w-full">
-        <label
-          for="environment"
-          class="block text-lg mb-3 text-cyan-100 font-medium"
+        <label for="environment" class="block text-lg mb-3 text-cyan-100 font-medium"
           >Choose Your Mission Environment:</label
         >
         <select

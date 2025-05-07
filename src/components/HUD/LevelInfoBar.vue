@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useGameStore } from "../../stores/gameStore";
 import { storeToRefs } from "pinia";
-import { spaceLevels, seaLevels } from "../../game/levels";
+import { computed } from "vue";
+
+import { seaLevels, spaceLevels } from "../../game/levels";
+import { useGameStore } from "../../stores/gameStore";
 
 const gameStore = useGameStore();
 const { environment, currentLevel } = storeToRefs(gameStore);
@@ -27,16 +28,14 @@ const levelObjective = computed(() => {
 // Compute level details for display
 const levelDetails = computed(() => {
   const currentLevels = environment.value === "space" ? spaceLevels : seaLevels;
-  const levelConfig = currentLevels.find(
-    (level) => level.levelNumber === currentLevel.value
-  );
+  const levelConfig = currentLevels.find((level) => level.levelNumber === currentLevel.value);
   if (!levelConfig) return null;
 
   return {
     windStrength: `${levelConfig.windStrength} m/s`,
     gravity: `${Math.abs(levelConfig.gravity)} m/s²`,
     platformSize: `${levelConfig.platformWidth}x${levelConfig.platformDepth}m`,
-    waveHeight: levelConfig.waveHeight ? `${levelConfig.waveHeight}m` : null,
+    waveHeight: levelConfig.waveHeight ? `${levelConfig.waveHeight}m` : null
   };
 });
 </script>

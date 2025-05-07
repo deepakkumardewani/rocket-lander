@@ -1,23 +1,18 @@
 <script setup lang="ts">
-import { useGameStore } from "../../stores/gameStore";
 import { storeToRefs } from "pinia";
 
+import { useGameStore } from "../../stores/gameStore";
+
 const gameStore = useGameStore();
-const {
-  score,
-  gameState,
-  currentLevel,
-  isLevelCompleted,
-  crashMetrics,
-  totalLevels,
-} = storeToRefs(gameStore);
+const { score, gameState, currentLevel, isLevelCompleted, crashMetrics, totalLevels } =
+  storeToRefs(gameStore);
 
 // Format velocity for crash display
 const formatVelocity = (velocity: { x: number; y: number; z: number }) => {
   return {
     x: velocity.x.toFixed(2),
     y: velocity.y.toFixed(2),
-    z: velocity.z.toFixed(2),
+    z: velocity.z.toFixed(2)
   };
 };
 
@@ -121,20 +116,13 @@ const handleRestartGame = () => {
     <div v-else class="text-red-400">
       <div class="text-3xl mb-2 text-shadow-lg">💥</div>
       <div class="font-bold text-xl mb-3 tracking-wider">MISSION FAILED</div>
-      <div class="text-sm text-white/80 font-medium mb-2">
-        Your rocket crashed!
-      </div>
+      <div class="text-sm text-white/80 font-medium mb-2">Your rocket crashed!</div>
 
       <!-- Crash Velocity Display -->
-      <div
-        v-if="crashMetrics"
-        class="bg-red-400/10 border border-red-400/20 rounded p-2 mb-4"
-      >
+      <div v-if="crashMetrics" class="bg-red-400/10 border border-red-400/20 rounded p-2 mb-4">
         <div class="text-xs text-white/80 mb-1">Landing too hard</div>
         <div class="flex justify-center text-sm">
-          <div class="font-bold">
-            {{ formatVelocity(crashMetrics.velocity).y }} m/s
-          </div>
+          <div class="font-bold">{{ formatVelocity(crashMetrics.velocity).y }} m/s</div>
         </div>
       </div>
 

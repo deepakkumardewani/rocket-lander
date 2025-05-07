@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, defineProps } from "vue";
+import { defineProps, onMounted, ref } from "vue";
+
 import type { SceneManager } from "../game/sceneManager";
 
 const props = defineProps<{
@@ -22,7 +23,7 @@ const effectTypes: EffectType[] = [
   "shootingStars",
   "starField",
   "clouds",
-  "birds",
+  "birds"
 ];
 
 const intensityValue = ref(100);
@@ -36,7 +37,7 @@ const effectsState = ref({
   shootingStars: true,
   starField: true,
   clouds: true,
-  birds: true,
+  birds: true
 });
 
 // Toggle panel visibility
@@ -80,11 +81,7 @@ onMounted(() => {
 
 <template>
   <div class="effects-panel">
-    <button
-      @click="togglePanel"
-      class="toggle-button"
-      :class="{ active: isPanelVisible }"
-    >
+    <button @click="togglePanel" class="toggle-button" :class="{ active: isPanelVisible }">
       <span>FPS: {{ fpsValue }}</span>
       <span v-if="!isPanelVisible">⚙️</span>
       <span v-else>✕</span>
@@ -95,13 +92,7 @@ onMounted(() => {
 
       <div class="control-group">
         <label>Effects Intensity: {{ intensityValue }}%</label>
-        <input
-          type="range"
-          min="0"
-          max="100"
-          v-model="intensityValue"
-          @input="updateIntensity"
-        />
+        <input type="range" min="0" max="100" v-model="intensityValue" @input="updateIntensity" />
       </div>
 
       <!-- <div class="control-group">
@@ -124,11 +115,7 @@ onMounted(() => {
       <div class="control-group effects-toggles">
         <div v-for="effect in effectTypes" :key="effect" class="effect-toggle">
           <label>
-            <input
-              type="checkbox"
-              :checked="effectsState[effect]"
-              @change="toggleEffect(effect)"
-            />
+            <input type="checkbox" :checked="effectsState[effect]" @change="toggleEffect(effect)" />
             {{ effect.charAt(0).toUpperCase() + effect.slice(1) }}
           </label>
         </div>

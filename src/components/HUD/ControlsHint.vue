@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useGameStore } from "../../stores/gameStore";
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
+
+import { useGameStore } from "../../stores/gameStore";
 
 const gameStore = useGameStore();
 const { gameState } = storeToRefs(gameStore);

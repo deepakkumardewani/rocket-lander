@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
 import { Eye } from "lucide-vue-next";
+import { ref } from "vue";
+
 import type { SceneManager } from "../../game/sceneManager";
 
 const props = defineProps<{
@@ -25,8 +26,7 @@ const handleZoomChange = (event: Event) => {
     const distance =
       props.sceneManager.controls.maxDistance -
       ((newZoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) *
-        (props.sceneManager.controls.maxDistance -
-          props.sceneManager.controls.minDistance);
+        (props.sceneManager.controls.maxDistance - props.sceneManager.controls.minDistance);
     props.sceneManager.camera.position.copy(direction.multiplyScalar(distance));
   }
 };
@@ -38,8 +38,7 @@ const updateZoomFromCamera = (cameraDistance: number) => {
   // we need to invert the relationship
   const calculatedZoom = Math.round(
     ((props.sceneManager.controls.maxDistance - cameraDistance) /
-      (props.sceneManager.controls.maxDistance -
-        props.sceneManager.controls.minDistance)) *
+      (props.sceneManager.controls.maxDistance - props.sceneManager.controls.minDistance)) *
       (MAX_ZOOM - MIN_ZOOM) +
       MIN_ZOOM
   );
@@ -47,7 +46,7 @@ const updateZoomFromCamera = (cameraDistance: number) => {
 };
 
 defineExpose({
-  updateZoomFromCamera,
+  updateZoomFromCamera
 });
 </script>
 
@@ -61,12 +60,8 @@ defineExpose({
       >
         <Eye class="w-4 h-4" />
       </div>
-      <div class="font-semibold text-sm tracking-wider text-white/90 uppercase">
-        ZOOM
-      </div>
-      <div class="ml-auto font-bold text-[0.9rem] tabular-nums">
-        {{ zoomValue }}%
-      </div>
+      <div class="font-semibold text-sm tracking-wider text-white/90 uppercase">ZOOM</div>
+      <div class="ml-auto font-bold text-[0.9rem] tabular-nums">{{ zoomValue }}%</div>
     </div>
     <input
       type="range"

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { useGameStore } from "../../stores/gameStore";
+import { Fuel } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
-import { Fuel } from "lucide-vue-next";
+
+import { useGameStore } from "../../stores/gameStore";
 
 const gameStore = useGameStore();
 const { fuel } = storeToRefs(gameStore);
@@ -30,18 +31,12 @@ const fuelStatusClass = computed(() => {
       >
         <Fuel class="w-4 h-4" />
       </div>
-      <div class="font-semibold text-sm tracking-wider text-white/90 uppercase">
-        FUEL
-      </div>
-      <div class="ml-auto font-bold text-[0.9rem] tabular-nums">
-        {{ formattedFuel }}%
-      </div>
+      <div class="font-semibold text-sm tracking-wider text-white/90 uppercase">FUEL</div>
+      <div class="ml-auto font-bold text-[0.9rem] tabular-nums">{{ formattedFuel }}%</div>
     </div>
 
     <div class="relative">
-      <div
-        class="h-4 bg-[rgba(30,30,30,0.6)] rounded-lg border border-white/10 overflow-hidden"
-      >
+      <div class="h-4 bg-[rgba(30,30,30,0.6)] rounded-lg border border-white/10 overflow-hidden">
         <div
           class="h-full transition-all duration-300"
           :class="fuelStatusClass"
@@ -51,36 +46,11 @@ const fuelStatusClass = computed(() => {
 
       <!-- Fuel level markers -->
       <div class="relative h-3.5 mt-1">
-        <div
-          class="absolute -translate-x-1/2 text-xs text-white/60"
-          style="left: 0%"
-        >
-          0
-        </div>
-        <div
-          class="absolute -translate-x-1/2 text-xs text-white/60"
-          style="left: 25%"
-        >
-          25
-        </div>
-        <div
-          class="absolute -translate-x-1/2 text-xs text-white/60"
-          style="left: 50%"
-        >
-          50
-        </div>
-        <div
-          class="absolute -translate-x-1/2 text-xs text-white/60"
-          style="left: 75%"
-        >
-          75
-        </div>
-        <div
-          class="absolute -translate-x-1/2 text-xs text-white/60"
-          style="left: 100%"
-        >
-          100
-        </div>
+        <div class="absolute -translate-x-1/2 text-xs text-white/60" style="left: 0%">0</div>
+        <div class="absolute -translate-x-1/2 text-xs text-white/60" style="left: 25%">25</div>
+        <div class="absolute -translate-x-1/2 text-xs text-white/60" style="left: 50%">50</div>
+        <div class="absolute -translate-x-1/2 text-xs text-white/60" style="left: 75%">75</div>
+        <div class="absolute -translate-x-1/2 text-xs text-white/60" style="left: 100%">100</div>
       </div>
     </div>
   </div>

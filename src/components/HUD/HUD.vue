@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import type { SceneManager } from "../../game/sceneManager";
-import LevelInfoBar from "./LevelInfoBar.vue";
-import StatusBar from "./StatusBar.vue";
+import { ref } from "vue";
+
+import ControlsHint from "./ControlsHint.vue";
 import FuelGauge from "./FuelGauge.vue";
 import GameResults from "./GameResults.vue";
-import ControlsHint from "./ControlsHint.vue";
+import LevelInfoBar from "./LevelInfoBar.vue";
+// import RocketSelector from './RocketSelector.vue'
+import StatusBar from "./StatusBar.vue";
 import ZoomControl from "./ZoomControl.vue";
-import RocketSelector from "./RocketSelector.vue";
-import { ref } from "vue";
+
+import type { SceneManager } from "../../game/sceneManager";
 
 // Define props
 defineProps<{
@@ -24,7 +26,7 @@ const updateZoomFromCamera = (cameraDistance: number) => {
 
 // Expose the method to parent components
 defineExpose({
-  updateZoomFromCamera,
+  updateZoomFromCamera
 });
 </script>
 
@@ -32,7 +34,7 @@ defineExpose({
   <div
     class="absolute bottom-5 right-5 w-[350px] flex flex-col gap-4 font-mono text-white text-shadow"
   >
-    <RocketSelector />
+    <!-- <RocketSelector /> -->
     <LevelInfoBar />
     <StatusBar />
     <FuelGauge />
