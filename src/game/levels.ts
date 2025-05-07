@@ -37,7 +37,7 @@ export const spaceLevels: LevelConfig[] = [
     platformDepth: 5,
     windStrength: 0,
     gravity: -9.81,
-    startingFuel: 100,
+    startingFuel: 100
   },
   {
     levelNumber: 2,
@@ -45,7 +45,7 @@ export const spaceLevels: LevelConfig[] = [
     platformDepth: 7,
     windStrength: 1,
     gravity: -9.81,
-    startingFuel: 75,
+    startingFuel: 75
   },
   {
     levelNumber: 3,
@@ -59,8 +59,8 @@ export const spaceLevels: LevelConfig[] = [
     // },
     windStrength: 1.5,
     gravity: -9.81,
-    startingFuel: 50,
-  },
+    startingFuel: 50
+  }
   // {
   //   levelNumber: 4,
   //   platformWidth: 5,
@@ -95,7 +95,7 @@ export const seaLevels: LevelConfig[] = [
     windStrength: 0,
     gravity: -9.81,
     startingFuel: 100,
-    waveHeight: 0.2,
+    waveHeight: 0.2
   },
   {
     levelNumber: 2,
@@ -104,7 +104,7 @@ export const seaLevels: LevelConfig[] = [
     windStrength: 1,
     gravity: -9.81,
     startingFuel: 75,
-    waveHeight: 0.2,
+    waveHeight: 0.2
   },
   {
     levelNumber: 3,
@@ -119,8 +119,8 @@ export const seaLevels: LevelConfig[] = [
     windStrength: 2,
     gravity: -9.81,
     startingFuel: 50,
-    waveHeight: 0.5,
-  },
+    waveHeight: 0.5
+  }
   // {
   //   levelNumber: 4,
   //   platformWidth: 5,

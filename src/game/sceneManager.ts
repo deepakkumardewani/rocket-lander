@@ -1,14 +1,15 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Sky } from "three/addons/objects/Sky.js";
-import { StarField } from "./space/StarField";
-import { CelestialObjects } from "./space/CelestialObjects";
-import { ShootingStars } from "./space/ShootingStars";
-import { Nebula } from "./space/Nebula";
-import { Aurora } from "./space/Aurora";
-import { LensFlare } from "./space/LensFlare";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+
 import { Birds } from "./sea/Birds";
 import { Cloud } from "./sea/Clouds";
+import { Aurora } from "./space/Aurora";
+import { CelestialObjects } from "./space/CelestialObjects";
+import { LensFlare } from "./space/LensFlare";
+import { Nebula } from "./space/Nebula";
+import { ShootingStars } from "./space/ShootingStars";
+import { StarField } from "./space/StarField";
 
 /**
  * Creates and configures the Three.js scene
@@ -44,7 +45,7 @@ export function createCamera(container: HTMLElement): THREE.PerspectiveCamera {
 export function createRenderer(container: HTMLElement): THREE.WebGLRenderer {
   const renderer = new THREE.WebGLRenderer({
     antialias: true,
-    alpha: true,
+    alpha: true
   });
 
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -138,7 +139,7 @@ export class SceneManager {
   private fpsCounter: { count: number; lastTime: number; value: number } = {
     count: 0,
     lastTime: 0,
-    value: 0,
+    value: 0
   };
   private effectsIntensity: number = 1.0;
   private cubeCamera: THREE.CubeCamera | null = null;
@@ -247,7 +248,7 @@ export class SceneManager {
     const skyboxMaterials = textures.map((texture) => {
       return new THREE.MeshBasicMaterial({
         map: texture,
-        side: THREE.BackSide,
+        side: THREE.BackSide
       });
     });
 
@@ -297,7 +298,7 @@ export class SceneManager {
     const skyboxMaterials = textures.map((texture) => {
       return new THREE.MeshBasicMaterial({
         map: texture,
-        side: THREE.BackSide,
+        side: THREE.BackSide
       });
     });
 
@@ -447,7 +448,7 @@ export class SceneManager {
     // Create new lens flare with options (passing the camera)
     this.lensFlare = new LensFlare({
       ...options,
-      camera: this.camera,
+      camera: this.camera
     });
     this.scene.add(this.lensFlare.getMesh());
 
@@ -531,11 +532,7 @@ export class SceneManager {
       this.clouds = null;
     }
 
-    this.clouds = Cloud.createClouds(
-      this.scene,
-      options?.boundary || 4000,
-      options?.count || 50
-    );
+    this.clouds = Cloud.createClouds(this.scene, options?.boundary || 4000, options?.count || 50);
 
     // Create new clouds with the camera reference
     // this.clouds = Array.from({ length: options?.count || 50 }, () => {
@@ -567,7 +564,7 @@ export class SceneManager {
       this.cubeRenderTarget = new THREE.WebGLCubeRenderTarget(resolution, {
         format: THREE.RGBAFormat,
         generateMipmaps: true,
-        minFilter: THREE.LinearMipmapLinearFilter,
+        minFilter: THREE.LinearMipmapLinearFilter
       });
 
       // Create a cube camera with appropriate near and far clipping planes
@@ -605,12 +602,8 @@ export class SceneManager {
       (child) => child instanceof THREE.DirectionalLight
     ) as THREE.DirectionalLight[];
 
-    const originalAmbientIntensities = ambientLights.map(
-      (light) => light.intensity
-    );
-    const originalDirectionalIntensities = directionalLights.map(
-      (light) => light.intensity
-    );
+    const originalAmbientIntensities = ambientLights.map((light) => light.intensity);
+    const originalDirectionalIntensities = directionalLights.map((light) => light.intensity);
 
     // Increase light intensity for reflections
     ambientLights.forEach((light) => (light.intensity *= 1.2));
@@ -620,12 +613,9 @@ export class SceneManager {
     this.cubeCamera.update(this.renderer, this.scene);
 
     // Restore original light intensities
-    ambientLights.forEach(
-      (light, index) => (light.intensity = originalAmbientIntensities[index])
-    );
+    ambientLights.forEach((light, index) => (light.intensity = originalAmbientIntensities[index]));
     directionalLights.forEach(
-      (light, index) =>
-        (light.intensity = originalDirectionalIntensities[index])
+      (light, index) => (light.intensity = originalDirectionalIntensities[index])
     );
 
     // Make the sea surface visible again
@@ -682,7 +672,7 @@ export class SceneManager {
     // Update sun position based on elevation and azimuth
     this.updateSunPosition({
       elevation: options.elevation ?? 4,
-      azimuth: options.azimuth ?? 90,
+      azimuth: options.azimuth ?? 90
     });
 
     // console.log("Created dynamic sky with atmospheric scattering");
@@ -720,7 +710,7 @@ export class SceneManager {
 
     // Emit event for any components that need to know about sun position changes
     const event = new CustomEvent("sunPositionChanged", {
-      detail: { position: this.sunPosition.clone() },
+      detail: { position: this.sunPosition.clone() }
     });
     window.dispatchEvent(event);
   }
@@ -759,7 +749,7 @@ export class SceneManager {
     this.birds = Birds.createBirds(this.scene, {
       flockCount: options?.flockCount || 3,
       birdHeight: options?.birdHeight || 50,
-      direction: options?.direction || windDirection,
+      direction: options?.direction || windDirection
     });
 
     // console.log("Created birds effect", { flockCount, windDirection });

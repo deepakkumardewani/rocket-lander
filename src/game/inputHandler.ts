@@ -27,7 +27,7 @@ export class InputHandler {
       "r",
       "R",
       "n",
-      "N",
+      "N"
     ];
     gameControls.forEach((key) => {
       this.keyStates.set(key, false);
@@ -53,17 +53,9 @@ export class InputHandler {
   private handleKeyDown(event: KeyboardEvent): void {
     // Prevent default behavior for game control keys
     if (
-      [
-        "ArrowLeft",
-        "ArrowRight",
-        "ArrowUp",
-        "ArrowDown",
-        " ",
-        "r",
-        "R",
-        "n",
-        "N",
-      ].includes(event.key)
+      ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "r", "R", "n", "N"].includes(
+        event.key
+      )
     ) {
       event.preventDefault();
     }
@@ -186,7 +178,7 @@ export class InputHandler {
       "r",
       "R",
       "n",
-      "N",
+      "N"
     ];
     gameControls.forEach((key) => {
       this.keyStates.set(key, false);

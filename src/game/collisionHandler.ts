@@ -1,11 +1,11 @@
 import * as CANNON from "cannon-es";
-// import { Vec3 } from "cannon-es";
 import * as THREE from "three";
-import { onCollision } from "./physics";
-import { handlePhysicsError } from "../utils/errorHandler";
+
 import { useGameStore } from "../stores/gameStore";
 import type { LandingMetrics } from "../types/storeTypes";
+import { handlePhysicsError } from "../utils/errorHandler";
 import { ParticleSystem } from "./ParticleSystem";
+import { onCollision } from "./physics";
 
 // Constants for successful landing criteria
 const MAX_LANDING_VELOCITY = 5; // Maximum vertical velocity for a safe landing (m/s)
@@ -22,10 +22,7 @@ const landingTargets = new Map<CANNON.Body, boolean>();
  * @param body The physics body of the platform
  * @param isTarget Whether this is a primary landing target
  */
-export function registerLandingTarget(
-  body: CANNON.Body,
-  isTarget: boolean = true
-): void {
+export function registerLandingTarget(body: CANNON.Body, isTarget: boolean = true): void {
   landingTargets.set(body, isTarget);
 }
 
@@ -70,9 +67,7 @@ function checkLandingSuccess(rocketBody: CANNON.Body): {
 
   // Calculate angle between rocket's up vector and world up vector
   const worldUp = new CANNON.Vec3(0, 1, 0);
-  const angle = Math.acos(
-    worldUpVector.dot(worldUp) / (worldUpVector.length() * worldUp.length())
-  );
+  const angle = Math.acos(worldUpVector.dot(worldUp) / (worldUpVector.length() * worldUp.length()));
   const angleDegrees = angle * (180 / Math.PI);
 
   // Get the rocket's metrics for evaluation
@@ -80,13 +75,13 @@ function checkLandingSuccess(rocketBody: CANNON.Body): {
     position: {
       x: rocketBody.position.x,
       y: rocketBody.position.y,
-      z: rocketBody.position.z,
+      z: rocketBody.position.z
     },
     velocity: {
       x: rocketBody.velocity.x,
       y: rocketBody.velocity.y,
-      z: rocketBody.velocity.z,
-    },
+      z: rocketBody.velocity.z
+    }
   };
 
   // Check velocity (vertical component must be below threshold)
@@ -100,9 +95,7 @@ function checkLandingSuccess(rocketBody: CANNON.Body): {
   let reason: string | undefined;
 
   if (!velocityCheck) {
-    reason = `Landing too hard (${Math.abs(rocketBody.velocity.y).toFixed(
-      2
-    )} m/s)`;
+    reason = `Landing too hard (${Math.abs(rocketBody.velocity.y).toFixed(2)} m/s)`;
   } else if (!angleCheck) {
     reason = `Rocket not upright (${angleDegrees.toFixed(1)} degrees)`;
   }
@@ -110,7 +103,7 @@ function checkLandingSuccess(rocketBody: CANNON.Body): {
   return {
     success,
     metrics,
-    reason,
+    reason
   };
 }
 
@@ -139,7 +132,7 @@ export function setupCollisionDetection(
       count: 150,
       color: 0xff0000, // Red color for crash
       size: 0.3,
-      lifetime: 1.5, // Longer lifetime for crash effect
+      lifetime: 1.5 // Longer lifetime for crash effect
     });
   }
 
@@ -147,22 +140,16 @@ export function setupCollisionDetection(
     // Set up rocket collision event listener
     const cleanup = onCollision(rocketBody, (event) => {
       // Prevent handling multiple collisions after landing
-      if (
-        gameStore.gameState === "landed" ||
-        gameStore.gameState === "crashed"
-      ) {
+      if (gameStore.gameState === "landed" || gameStore.gameState === "crashed") {
         return;
       }
 
       // Check collision type based on the object hit
       if (isLandingTarget(event.body)) {
-        console.log(
-          "Collision detected between rocket and potential landing surface"
-        );
+        console.log("Collision detected between rocket and potential landing surface");
 
         // For Sea Level 4, only allow landing on the primary target
-        const isSeaLevel4 =
-          gameStore.environment === "sea" && gameStore.currentLevel === 4;
+        const isSeaLevel4 = gameStore.environment === "sea" && gameStore.currentLevel === 4;
 
         // Check if landing was successful
         const landingResult = checkLandingSuccess(rocketBody);
@@ -170,9 +157,7 @@ export function setupCollisionDetection(
         // For Sea Level 4, if it's not the primary target, always count as crash
         if (isSeaLevel4 && !isPrimaryLandingTarget(event.body)) {
           gameStore.setGameState("crashed");
-          console.log(
-            "Landing failed: Wrong platform - you must land on the green platform"
-          );
+          console.log("Landing failed: Wrong platform - you must land on the green platform");
 
           // Store the landing metrics for crash display
           gameStore.calculateScore(landingResult.metrics);
@@ -185,13 +170,7 @@ export function setupCollisionDetection(
               rocketBody.position.z
             );
 
-            crashParticles.spawn(
-              position,
-              new THREE.Vector3(0, 1, 0),
-              Math.PI,
-              5,
-              100
-            );
+            crashParticles.spawn(position, new THREE.Vector3(0, 1, 0), Math.PI, 5, 100);
           }
 
           // Call crash callback if provided
@@ -213,6 +192,11 @@ export function setupCollisionDetection(
 
           // Mark level as completed on successful landing
           gameStore.markLevelCompleted();
+
+          // Check for texture unlocks if all levels in the environment are completed
+          if (gameStore.currentLevel === gameStore.totalLevels) {
+            gameStore.checkForTextureUnlocks();
+          }
 
           // Calculate score based on landing metrics
           gameStore.calculateScore(landingResult.metrics);
@@ -263,13 +247,13 @@ export function setupCollisionDetection(
           position: {
             x: rocketBody.position.x,
             y: rocketBody.position.y,
-            z: rocketBody.position.z,
+            z: rocketBody.position.z
           },
           velocity: {
             x: rocketBody.velocity.x,
             y: rocketBody.velocity.y,
-            z: rocketBody.velocity.z,
-          },
+            z: rocketBody.velocity.z
+          }
         };
         gameStore.calculateScore(crashMetrics);
 
@@ -289,13 +273,7 @@ export function setupCollisionDetection(
             rocketBody.position.z
           );
 
-          crashParticles.spawn(
-            position,
-            new THREE.Vector3(0, 1, 0),
-            Math.PI,
-            5,
-            100
-          );
+          crashParticles.spawn(position, new THREE.Vector3(0, 1, 0), Math.PI, 5, 100);
         }
 
         // Call crash callback if provided
@@ -332,12 +310,7 @@ export function registerCollisionHandlers(
   onSuccessfulLanding?: () => void,
   onCrash?: () => void
 ): () => void {
-  return setupCollisionDetection(
-    rocketBody,
-    platformBody,
-    onSuccessfulLanding,
-    onCrash
-  );
+  return setupCollisionDetection(rocketBody, platformBody, onSuccessfulLanding, onCrash);
 }
 
 /**

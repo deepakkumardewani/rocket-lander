@@ -1,7 +1,9 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
-import { handlePhysicsError } from "../utils/errorHandler";
+
 import { WIND_CHANGE_INTERVAL, WIND_CHANGE_SPEED } from "../constants";
+import { handlePhysicsError } from "../utils/errorHandler";
+
 // Create and configure the physics world
 export const world = new CANNON.World();
 world.gravity.set(0, -9.81, 0); // Set gravity along the Y axis
@@ -80,9 +82,7 @@ export function updatePhysics(timeStep = 1 / 60): void {
       }
 
       // Find and apply wind to rocket body
-      const dynamicBodies = world.bodies.filter(
-        (body) => body.type === CANNON.Body.DYNAMIC
-      );
+      const dynamicBodies = world.bodies.filter((body) => body.type === CANNON.Body.DYNAMIC);
 
       for (const body of dynamicBodies) {
         if ((body as any).userData?.type === "rocket") {
@@ -108,10 +108,7 @@ export function updatePhysics(timeStep = 1 / 60): void {
  * @param mesh The THREE.js mesh to sync
  * @param body The CANNON.js body to sync with
  */
-export function syncMeshWithBody(
-  mesh: THREE.Object3D,
-  body: CANNON.Body
-): void {
+export function syncMeshWithBody(mesh: THREE.Object3D, body: CANNON.Body): void {
   mesh.position.copy(body.position as unknown as THREE.Vector3);
   mesh.quaternion.copy(body.quaternion as unknown as THREE.Quaternion);
 }

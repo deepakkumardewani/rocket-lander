@@ -1,4 +1,5 @@
 import * as THREE from "three";
+
 import { handleRenderingError } from "../utils/errorHandler";
 
 /**
@@ -34,10 +35,7 @@ export class ParticleSystem {
   private frustum: THREE.Frustum = new THREE.Frustum();
   private projScreenMatrix: THREE.Matrix4 = new THREE.Matrix4();
   private lastCameraPosition: THREE.Vector3 = new THREE.Vector3();
-  private boundingSphere: THREE.Sphere = new THREE.Sphere(
-    new THREE.Vector3(),
-    100
-  );
+  private boundingSphere: THREE.Sphere = new THREE.Sphere(new THREE.Vector3(), 100);
   private inFrustum: boolean = true;
 
   /**
@@ -90,7 +88,7 @@ export class ParticleSystem {
       this.material = new THREE.ShaderMaterial({
         uniforms: {
           pointTexture: { value: params.texture ? params.texture : null },
-          color: { value: new THREE.Color(color) },
+          color: { value: new THREE.Color(color) }
         },
         vertexShader: `
           attribute float size;
@@ -119,7 +117,7 @@ export class ParticleSystem {
         `,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-        transparent: true,
+        transparent: true
       });
 
       // Create mesh with geometry and material
@@ -151,10 +149,7 @@ export class ParticleSystem {
     // Only recalculate if camera moved
     if (camera.position.distanceToSquared(this.lastCameraPosition) > 0.1) {
       // Update frustum
-      this.projScreenMatrix.multiplyMatrices(
-        camera.projectionMatrix,
-        camera.matrixWorldInverse
-      );
+      this.projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       this.frustum.setFromProjectionMatrix(this.projScreenMatrix);
 
       // Update last camera position

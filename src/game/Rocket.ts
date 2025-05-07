@@ -1,15 +1,13 @@
-import * as THREE from "three";
 import * as CANNON from "cannon-es";
-import { world, createPhysicsMaterial } from "./physics";
-import {
-  handleRenderingError,
-  handlePhysicsError,
-} from "../utils/errorHandler";
-import { assetLoader } from "../utils/assetLoader";
-import { ParticleSystem } from "./ParticleSystem";
-import { useGameStore } from "../stores/gameStore";
-import type { RocketParams, RocketModelConfig } from "../types/rocketTypes";
+import * as THREE from "three";
+
 import { ROCKET_MODELS_CONFIG } from "../lib/config";
+import { useGameStore } from "../stores/gameStore";
+import type { RocketModelConfig, RocketParams } from "../types/rocketTypes";
+import { assetLoader } from "../utils/assetLoader";
+import { handlePhysicsError, handleRenderingError } from "../utils/errorHandler";
+import { ParticleSystem } from "./ParticleSystem";
+import { createPhysicsMaterial, world } from "./physics";
 
 /**
  * Class representing a rocket in the game
@@ -30,9 +28,7 @@ export class Rocket {
       // Get appropriate configuration for the current rocket model
       const gameStore = useGameStore();
       const currentModel = gameStore.rocketModel;
-      this.modelConfig =
-        ROCKET_MODELS_CONFIG[currentModel.id] ||
-        ROCKET_MODELS_CONFIG["default"];
+      this.modelConfig = ROCKET_MODELS_CONFIG[currentModel.id] || ROCKET_MODELS_CONFIG["default"];
 
       // Set default values if not provided
       const position =
@@ -58,11 +54,7 @@ export class Rocket {
       this.mesh.position.copy(position);
 
       // Scale the model using the model-specific scale factor
-      this.mesh.scale.set(
-        this.modelConfig.scale,
-        this.modelConfig.scale,
-        this.modelConfig.scale
-      );
+      this.mesh.scale.set(this.modelConfig.scale, this.modelConfig.scale, this.modelConfig.scale);
 
       // Apply model-specific position offset AFTER scaling
       this.mesh.position.copy(this.modelConfig.position);
@@ -96,19 +88,12 @@ export class Rocket {
           this.modelConfig.position.z
         ),
         linearDamping: 0.1, // Air resistance for linear motion
-        angularDamping: 0.5, // Air resistance for rotation
+        angularDamping: 0.5 // Air resistance for rotation
       });
 
       // Set initial rotation from model config
-      const quaternion = new THREE.Quaternion().setFromEuler(
-        this.modelConfig.rotation
-      );
-      this.body.quaternion.set(
-        quaternion.x,
-        quaternion.y,
-        quaternion.z,
-        quaternion.w
-      );
+      const quaternion = new THREE.Quaternion().setFromEuler(this.modelConfig.rotation);
+      this.body.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
       // Adjust the shape offset so the bottom of the cylinder contacts surfaces
       const cylinderHeight = bodyHeight / 2;
@@ -136,7 +121,7 @@ export class Rocket {
             count: thrusterConfig.count,
             color: thrusterConfig.color,
             size: thrusterConfig.size,
-            lifetime: thrusterConfig.lifetime,
+            lifetime: thrusterConfig.lifetime
           })
       );
     } catch (error) {
@@ -231,18 +216,8 @@ export class Rocket {
   setRotation(rotation: THREE.Euler): void {
     this.mesh.rotation.copy(rotation);
     const quaternion = new THREE.Quaternion().setFromEuler(rotation);
-    this.body.quaternion.set(
-      quaternion.x,
-      quaternion.y,
-      quaternion.z,
-      quaternion.w
-    );
-    this.body.previousQuaternion.set(
-      quaternion.x,
-      quaternion.y,
-      quaternion.z,
-      quaternion.w
-    );
+    this.body.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
+    this.body.previousQuaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
   }
 
   /**
@@ -251,12 +226,7 @@ export class Rocket {
    */
   setQuaternion(quaternion: THREE.Quaternion): void {
     this.mesh.quaternion.copy(quaternion);
-    this.body.quaternion.set(
-      quaternion.x,
-      quaternion.y,
-      quaternion.z,
-      quaternion.w
-    );
+    this.body.quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
   }
 
   /**
@@ -329,9 +299,7 @@ export class Rocket {
         }
         if (child.material) {
           if (Array.isArray(child.material)) {
-            child.material.forEach((material: THREE.Material) =>
-              material.dispose()
-            );
+            child.material.forEach((material: THREE.Material) => material.dispose());
           } else {
             child.material.dispose();
           }

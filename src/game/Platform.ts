@@ -1,7 +1,8 @@
-import * as THREE from "three";
 import * as CANNON from "cannon-es";
-import { world, createPhysicsMaterial } from "./physics";
+import * as THREE from "three";
+
 import { handleRenderingError } from "../utils/errorHandler";
+import { createPhysicsMaterial, world } from "./physics";
 
 /**
  * Parameters for creating a landing platform
@@ -55,7 +56,7 @@ export class Platform {
           type: params.movement.type,
           axis: params.movement.axis || "x",
           amplitude: params.movement.amplitude,
-          frequency: params.movement.frequency,
+          frequency: params.movement.frequency
         };
       }
 
@@ -70,7 +71,7 @@ export class Platform {
       const material = new THREE.MeshPhongMaterial({
         color,
         shininess: 10,
-        flatShading: false,
+        flatShading: false
       });
 
       // Apply texture if provided
@@ -90,16 +91,14 @@ export class Platform {
       this.platformMaterial = createPhysicsMaterial("platform", 0.3, 0.8);
 
       // Create physics body (mass = 0 makes it static)
-      const shape = new CANNON.Box(
-        new CANNON.Vec3(width / 2, height / 2, depth / 2)
-      );
+      const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2));
       this.body = new CANNON.Body({
         mass: 0, // Static body
         material: this.platformMaterial,
         shape: shape,
         position: new CANNON.Vec3(position.x, 2, position.z), // Match visual position
         type: CANNON.Body.STATIC,
-        fixedRotation: false,
+        fixedRotation: false
       });
 
       // Store initial position for movement
@@ -139,9 +138,7 @@ export class Platform {
         this.body.position[axis] += amplitude * 0.016; // Assume 60fps, so 0.016 seconds per frame
 
         // Reset position when platform drifts too far
-        if (
-          Math.abs(this.body.position[axis] - this.initialPosition[axis]) > 20
-        ) {
+        if (Math.abs(this.body.position[axis] - this.initialPosition[axis]) > 20) {
           this.body.position[axis] = this.initialPosition[axis];
         }
         break;
@@ -164,9 +161,7 @@ export class Platform {
 
     // Sync mesh position and rotation with physics body
     this.mesh.position.copy(this.body.position as unknown as THREE.Vector3);
-    this.mesh.quaternion.copy(
-      this.body.quaternion as unknown as THREE.Quaternion
-    );
+    this.mesh.quaternion.copy(this.body.quaternion as unknown as THREE.Quaternion);
   }
 
   /**
