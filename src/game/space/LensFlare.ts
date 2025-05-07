@@ -77,7 +77,7 @@ export class LensFlare {
     flareColor = new THREE.Color(0xffffaa),
     size = 10,
     intensity = 1.0,
-    texture = null,
+    texture = null
   }: {
     sourcePosition: THREE.Vector3;
     camera: THREE.Camera;
@@ -105,14 +105,14 @@ export class LensFlare {
         flareTexture: { value: texture },
         flareColor: { value: flareColor },
         intensity: { value: intensity },
-        time: { value: 0 },
+        time: { value: 0 }
       },
       vertexShader: LensFlare.flareVertexShader,
       fragmentShader: LensFlare.flareFragmentShader,
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthTest: false,
-      depthWrite: false,
+      depthWrite: false
     });
 
     // Create lens flare mesh
@@ -150,10 +150,7 @@ export class LensFlare {
 
         // Add some texture and highlights
         const noise = Math.random() * 0.1;
-        const highlight = Math.max(
-          0,
-          1.0 - Math.abs(distance - maxDist * 0.7) / (maxDist * 0.2)
-        );
+        const highlight = Math.max(0, 1.0 - Math.abs(distance - maxDist * 0.7) / (maxDist * 0.2));
 
         // Set color (white with some bloom)
         const value = Math.floor((intensity + noise + highlight * 0.5) * 255);
@@ -190,9 +187,7 @@ export class LensFlare {
    */
   private updateFlarePosition(): void {
     // Check if light source is behind the camera
-    const cameraDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(
-      this.camera.quaternion
-    );
+    const cameraDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
     const toSource = new THREE.Vector3()
       .subVectors(this.sourcePosition, this.camera.position)
       .normalize();

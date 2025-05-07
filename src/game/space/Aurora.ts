@@ -102,7 +102,7 @@ export class Aurora {
     radius = 90,
     baseColor = new THREE.Color(0x00ff88), // Green
     secondaryColor = new THREE.Color(0x4455ff), // Blue
-    initialIntensity = 0.0,
+    initialIntensity = 0.0
   }: {
     radius?: number;
     baseColor?: THREE.Color;
@@ -136,14 +136,14 @@ export class Aurora {
         baseColor: { value: baseColor },
         secondaryColor: { value: secondaryColor },
         time: { value: 0 },
-        intensity: { value: this.intensity },
+        intensity: { value: this.intensity }
       },
       vertexShader: Aurora.auroraVertexShader,
       fragmentShader: Aurora.auroraFragmentShader,
       transparent: true,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
-      depthWrite: false,
+      depthWrite: false
     });
 
     // Create mesh

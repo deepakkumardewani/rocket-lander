@@ -1,5 +1,5 @@
-import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import * as THREE from "three";
 
 /**
  * Class representing an obstacle in the game (asteroid or platform)
@@ -35,7 +35,7 @@ export class Obstacle {
       material = new THREE.MeshStandardMaterial({
         color: 0x8b4513, // Brown color for asteroids
         roughness: 0.8,
-        metalness: 0.2,
+        metalness: 0.2
       });
       shape = new CANNON.Sphere(size);
     } else {
@@ -44,7 +44,7 @@ export class Obstacle {
       material = new THREE.MeshStandardMaterial({
         color: isTarget ? 0x00ff00 : 0xff0000, // Green for target, red for others
         roughness: 0.5,
-        metalness: 0.2,
+        metalness: 0.2
       });
       shape = new CANNON.Box(new CANNON.Vec3(size / 2, 0.5, size / 2));
     }
@@ -58,7 +58,7 @@ export class Obstacle {
     // Create the physics body
     this.body = new CANNON.Body({
       mass: type === "asteroid" ? 10 : 0, // Asteroids are dynamic, platforms static
-      shape: shape,
+      shape: shape
     });
     this.body.position.set(position.x, position.y, position.z);
 
@@ -70,7 +70,7 @@ export class Obstacle {
     this.mesh.userData = {
       type: "obstacle",
       obstacleType: type,
-      isTarget,
+      isTarget
     };
   }
 

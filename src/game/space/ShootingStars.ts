@@ -30,7 +30,7 @@ export class ShootingStars {
     maxTrailLength = 20,
     minSpawnInterval = 3, // Minimum seconds between shooting stars
     maxSpawnInterval = 10, // Maximum seconds between shooting stars
-    texture = null,
+    texture = null
   }: {
     maxShootingStars?: number;
     maxTrailLength?: number;
@@ -56,10 +56,7 @@ export class ShootingStars {
 
     // Create geometry
     this.geometry = new THREE.BufferGeometry();
-    this.geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(this.positions, 3)
-    );
+    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
     this.geometry.setAttribute(
       "color",
       new THREE.BufferAttribute(new Float32Array(totalPoints * 3).fill(1.0), 3)
@@ -72,7 +69,7 @@ export class ShootingStars {
       vertexColors: true,
       transparent: true,
       blending: THREE.AdditiveBlending,
-      depthWrite: false,
+      depthWrite: false
     });
 
     // Apply texture if provided
@@ -111,10 +108,7 @@ export class ShootingStars {
    * Generate a random spawn interval between min and max values
    */
   private getRandomSpawnInterval(): number {
-    return (
-      this.minSpawnInterval +
-      Math.random() * (this.maxSpawnInterval - this.minSpawnInterval)
-    );
+    return this.minSpawnInterval + Math.random() * (this.maxSpawnInterval - this.minSpawnInterval);
   }
 
   /**
@@ -195,10 +189,8 @@ export class ShootingStars {
     }
 
     // Mark geometry attributes for update
-    (this.geometry.attributes.position as THREE.BufferAttribute).needsUpdate =
-      true;
-    (this.geometry.attributes.opacity as THREE.BufferAttribute).needsUpdate =
-      true;
+    (this.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+    (this.geometry.attributes.opacity as THREE.BufferAttribute).needsUpdate = true;
     (this.geometry.attributes.size as THREE.BufferAttribute).needsUpdate = true;
 
     // Log shooting star spawn
@@ -216,9 +208,7 @@ export class ShootingStars {
   private isOutOfBounds(position: THREE.Vector3): boolean {
     // Consider a star out of bounds if it's more than 120 units from center
     const distanceSquared =
-      position.x * position.x +
-      position.y * position.y +
-      position.z * position.z;
+      position.x * position.x + position.y * position.y + position.z * position.z;
     return distanceSquared > 120 * 120;
   }
 
@@ -252,10 +242,8 @@ export class ShootingStars {
 
       // Update the head position
       this.positions[headIndex] += this.velocities[headIndex] * deltaTime;
-      this.positions[headIndex + 1] +=
-        this.velocities[headIndex + 1] * deltaTime;
-      this.positions[headIndex + 2] +=
-        this.velocities[headIndex + 2] * deltaTime;
+      this.positions[headIndex + 1] += this.velocities[headIndex + 1] * deltaTime;
+      this.positions[headIndex + 2] += this.velocities[headIndex + 2] * deltaTime;
 
       // Check if the star is out of bounds
       const headPos = new THREE.Vector3(
@@ -293,10 +281,8 @@ export class ShootingStars {
     }
 
     // Update geometry attributes
-    (this.geometry.attributes.position as THREE.BufferAttribute).needsUpdate =
-      true;
-    (this.geometry.attributes.opacity as THREE.BufferAttribute).needsUpdate =
-      true;
+    (this.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+    (this.geometry.attributes.opacity as THREE.BufferAttribute).needsUpdate = true;
 
     // Update material for opacity changes
     this.material.opacity = 1.0;
@@ -356,10 +342,7 @@ export class ShootingStars {
    * @param minSpawnInterval Minimum seconds between spawns
    * @param maxSpawnInterval Maximum seconds between spawns
    */
-  public setSpawnIntervals(
-    minSpawnInterval: number,
-    maxSpawnInterval: number
-  ): void {
+  public setSpawnIntervals(minSpawnInterval: number, maxSpawnInterval: number): void {
     this.minSpawnInterval = Math.max(1, minSpawnInterval);
     this.maxSpawnInterval = Math.max(this.minSpawnInterval, maxSpawnInterval);
 

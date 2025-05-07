@@ -35,7 +35,7 @@ export class CloudV2 {
   private lodDistances: { near: number; mid: number; far: number } = {
     near: 1000,
     mid: 3000,
-    far: 6000,
+    far: 6000
   };
 
   /**
@@ -105,10 +105,7 @@ export class CloudV2 {
    * @param numClusters Number of cloud clusters to create
    * @param texture Optional texture to use for clouds
    */
-  private createClouds(
-    numClusters: number,
-    customTexture?: THREE.Texture | null
-  ): void {
+  private createClouds(numClusters: number, customTexture?: THREE.Texture | null): void {
     const textureLoader = new THREE.TextureLoader();
 
     const initClouds = (texture: THREE.Texture) => {
@@ -127,7 +124,7 @@ export class CloudV2 {
         depthWrite: false,
         blending: THREE.NormalBlending,
         side: THREE.DoubleSide,
-        fog: true, // Enable fog for better distance fading
+        fog: true // Enable fog for better distance fading
       });
 
       this.materials.push(sharedMaterial);
@@ -135,8 +132,7 @@ export class CloudV2 {
       for (let ring = 0; ring < rings; ring++) {
         // Exponential distribution for ring radius to place more clouds at horizon
         const ringProgress = ring / (rings - 1);
-        const ringRadius =
-          this.boundary * (0.2 + Math.pow(ringProgress, 1.5) * 2.5);
+        const ringRadius = this.boundary * (0.2 + Math.pow(ringProgress, 1.5) * 2.5);
 
         // Calculate height factor based on distance
         // Clouds get progressively higher as they get more distant
@@ -181,8 +177,7 @@ export class CloudV2 {
           const scale = (0.8 + Math.random() * 0.4) * distanceScale;
 
           // Create fewer clouds at similar positions for denser clusters when in low or medium quality
-          const numCloudsAtPosition =
-            this.qualitySetting === "high" && ring >= 4 ? 2 : 1;
+          const numCloudsAtPosition = this.qualitySetting === "high" && ring >= 4 ? 2 : 1;
 
           for (let j = 0; j < numCloudsAtPosition; j++) {
             const offsetPosition = position.clone();
@@ -192,12 +187,7 @@ export class CloudV2 {
               offsetPosition.z += (Math.random() - 0.5) * 100;
               offsetPosition.y += (Math.random() - 0.5) * 50; // Increased vertical variation
             }
-            this.createSingleCloud(
-              offsetPosition,
-              scale,
-              geometry,
-              sharedMaterial
-            );
+            this.createSingleCloud(offsetPosition, scale, geometry, sharedMaterial);
           }
         }
       }
@@ -228,12 +218,7 @@ export class CloudV2 {
   ): void {
     const cloudGroup = new THREE.Group();
     // Adjust number of layers based on quality
-    const numLayers =
-      this.qualitySetting === "low"
-        ? 2
-        : this.qualitySetting === "medium"
-        ? 3
-        : 4;
+    const numLayers = this.qualitySetting === "low" ? 2 : this.qualitySetting === "medium" ? 3 : 4;
 
     // Create layers at fixed angles
     const angleStep = (Math.PI * 2) / numLayers;
@@ -314,10 +299,8 @@ export class CloudV2 {
       cloudGroup.visible = true;
 
       // Move cloud based on wind direction and speed
-      cloudGroup.position.x +=
-        this.windDirection.x * this.windSpeed * scaledDelta;
-      cloudGroup.position.z +=
-        this.windDirection.z * this.windSpeed * scaledDelta;
+      cloudGroup.position.x += this.windDirection.x * this.windSpeed * scaledDelta;
+      cloudGroup.position.z += this.windDirection.z * this.windSpeed * scaledDelta;
 
       // Very subtle rotation
       cloudGroup.rotation.y += scaledDelta * 0.001 * (Math.random() - 0.5);
@@ -408,14 +391,9 @@ export class CloudV2 {
     if (distance > this.boundary * 0.9) {
       const fadeOutFactor =
         1 -
-        Math.min(
-          1,
-          (distance - this.boundary * 0.9) /
-            (maxVisibleDistance - this.boundary * 0.9)
-        );
+        Math.min(1, (distance - this.boundary * 0.9) / (maxVisibleDistance - this.boundary * 0.9));
       children.forEach((child) => {
-        const material = (child as THREE.Mesh)
-          .material as THREE.MeshBasicMaterial;
+        const material = (child as THREE.Mesh).material as THREE.MeshBasicMaterial;
         if (material && material.opacity !== undefined) {
           material.opacity = 0.5 * fadeOutFactor;
         }
@@ -429,8 +407,7 @@ export class CloudV2 {
    */
   private checkWorldBounds(cloudGroup: THREE.Group): void {
     const distance = Math.sqrt(
-      cloudGroup.position.x * cloudGroup.position.x +
-        cloudGroup.position.z * cloudGroup.position.z
+      cloudGroup.position.x * cloudGroup.position.x + cloudGroup.position.z * cloudGroup.position.z
     );
 
     if (distance > this.boundary * 1.1) {

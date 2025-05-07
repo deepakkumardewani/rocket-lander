@@ -1,5 +1,6 @@
-import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import * as THREE from "three";
+
 import { world } from "../physics";
 
 export class Terrain {
@@ -9,16 +10,11 @@ export class Terrain {
 
   constructor(width: number = 100, depth: number = 100, segments: number = 32) {
     this.segments = segments;
-    const geometry = new THREE.PlaneGeometry(
-      width,
-      depth,
-      segments - 1,
-      segments - 1
-    );
+    const geometry = new THREE.PlaneGeometry(width, depth, segments - 1, segments - 1);
     const material = new THREE.MeshPhongMaterial({
       color: 0x808080,
       side: THREE.DoubleSide,
-      flatShading: true,
+      flatShading: true
     });
 
     // Rotate to lie flat
@@ -39,18 +35,15 @@ export class Terrain {
 
     // Create physics body
     const shape = new CANNON.Heightfield(heightMap, {
-      elementSize: width / (segments - 1),
+      elementSize: width / (segments - 1)
     });
     this.body = new CANNON.Body({
       mass: 0, // Static body
-      type: CANNON.Body.STATIC,
+      type: CANNON.Body.STATIC
     });
     this.body.addShape(shape);
     this.body.position.set(0, -5, 0);
-    this.body.quaternion.setFromAxisAngle(
-      new CANNON.Vec3(1, 0, 0),
-      -Math.PI / 2
-    );
+    this.body.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 
     // Store a reference to this object for easier access in collision handling
     this.mesh.userData.owner = this;

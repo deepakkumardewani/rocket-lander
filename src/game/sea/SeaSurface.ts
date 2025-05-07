@@ -1,6 +1,7 @@
-import * as THREE from "three";
 import * as CANNON from "cannon-es";
+import * as THREE from "three";
 import { Water } from "three/addons/objects/Water.js";
+
 import { world } from "../physics";
 
 /**
@@ -36,7 +37,7 @@ export class SeaSurface {
     waveSpeedFactor = 1.0,
     sunDirection = new THREE.Vector3(0.70707, 0.70707, 0),
     cubeRenderTarget = null,
-    quality = "medium",
+    quality = "medium"
   }: {
     size?: number;
     waterColor?: number;
@@ -66,12 +67,9 @@ export class SeaSurface {
 
     // Load the normal map if not provided
     if (!normalMap) {
-      normalMap = new THREE.TextureLoader().load(
-        "textures/waternormals.jpg",
-        (texture) => {
-          texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        }
-      );
+      normalMap = new THREE.TextureLoader().load("textures/waternormals.jpg", (texture) => {
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      });
     }
     this.normalMap = normalMap;
 
@@ -86,7 +84,7 @@ export class SeaSurface {
       distortionScale: this.adjustDistortionScale(distortionScale),
       fog: fog,
       // Add cube render target for reflections if provided
-      ...(cubeRenderTarget && { reflectionCubeRenderTarget: cubeRenderTarget }),
+      ...(cubeRenderTarget && { reflectionCubeRenderTarget: cubeRenderTarget })
     });
 
     // Position and orient the water
@@ -99,7 +97,7 @@ export class SeaSurface {
     this.body = new CANNON.Body({
       mass: 0, // Static body
       type: CANNON.Body.STATIC,
-      collisionResponse: true,
+      collisionResponse: true
     });
 
     // Add shape to body
@@ -109,10 +107,7 @@ export class SeaSurface {
     this.body.position.set(position.x, position.y, position.z);
 
     // Rotate to match the visual plane
-    this.body.quaternion.setFromAxisAngle(
-      new CANNON.Vec3(1, 0, 0),
-      -Math.PI / 2
-    );
+    this.body.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
 
     // Store a reference to this object for easier access in collision handling
     this.water.userData.owner = this;
@@ -193,9 +188,7 @@ export class SeaSurface {
       // Update water with new sun direction
       if (this.water && this.water.material.uniforms["sunDirection"]) {
         const normalizedDirection = sunPosition.clone().normalize();
-        this.water.material.uniforms["sunDirection"].value.copy(
-          normalizedDirection
-        );
+        this.water.material.uniforms["sunDirection"].value.copy(normalizedDirection);
         this.sunDirection = normalizedDirection;
       }
     }
@@ -215,8 +208,7 @@ export class SeaSurface {
       const scaledDelta = deltaTime * this.updateFrequency;
 
       // Apply the wave speed factor to the time increment
-      this.water.material.uniforms["time"].value +=
-        scaledDelta * this.waveSpeedFactor;
+      this.water.material.uniforms["time"].value += scaledDelta * this.waveSpeedFactor;
 
       // Update normal map offset based on wave direction
       const time = this.water.material.uniforms["time"].value;
@@ -239,8 +231,7 @@ export class SeaSurface {
     // Update distortion scale based on quality
     if (this.water && this.water.material.uniforms["distortionScale"]) {
       const baseScale = 3.7; // Default distortion scale
-      this.water.material.uniforms["distortionScale"].value =
-        this.adjustDistortionScale(baseScale);
+      this.water.material.uniforms["distortionScale"].value = this.adjustDistortionScale(baseScale);
     }
 
     // Update update frequency
@@ -440,7 +431,7 @@ export class SeaSurface {
       depthWrite: false,
       depthTest: false,
       blending: THREE.NormalBlending,
-      side: THREE.DoubleSide,
+      side: THREE.DoubleSide
     });
 
     // Create mesh with the same geometry size as the water
@@ -473,7 +464,7 @@ export class SeaSurface {
         // This might require modifying shader code for proper rendering
         // For now, we'll update parameters based on the height for a simple effect
         this.setParameters({
-          distortionScale: 3.7 + height * 5, // Increase distortion with wave height
+          distortionScale: 3.7 + height * 5 // Increase distortion with wave height
         });
       }
     }

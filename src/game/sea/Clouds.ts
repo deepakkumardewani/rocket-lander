@@ -1,4 +1,5 @@
 import * as THREE from "three";
+
 import { AssetLoader } from "../../utils/assetLoader";
 
 interface CloudScene extends THREE.Scene {
@@ -37,11 +38,7 @@ export class Cloud {
   // private static tempQuaternion = new THREE.Quaternion();
   // private static tempEuler = new THREE.Euler();
 
-  constructor({
-    scene,
-    position = new THREE.Vector3(),
-    scale = 1.0,
-  }: CloudParams) {
+  constructor({ scene, position = new THREE.Vector3(), scale = 1.0 }: CloudParams) {
     this.scene = scene;
     this.position = position.clone();
     this.scale = scale;
@@ -77,7 +74,7 @@ export class Cloud {
         depthWrite: false,
         blending: THREE.NormalBlending,
         side: THREE.DoubleSide,
-        fog: true,
+        fog: true
       });
 
       // Create shared instancedMesh if not exists
@@ -105,16 +102,10 @@ export class Cloud {
 
       Cloud.tempMatrix.makeRotationY(angle);
       Cloud.tempVector
-        .set(
-          Math.cos(angle) * 20,
-          (Math.random() - 0.5) * 10,
-          Math.sin(angle) * 20
-        )
+        .set(Math.cos(angle) * 20, (Math.random() - 0.5) * 10, Math.sin(angle) * 20)
         .add(this.position);
       Cloud.tempMatrix.setPosition(Cloud.tempVector);
-      Cloud.tempMatrix.scale(
-        new THREE.Vector3(layerScale, layerScale * 0.6, 1)
-      );
+      Cloud.tempMatrix.scale(new THREE.Vector3(layerScale, layerScale * 0.6, 1));
 
       if (Cloud.instancedMesh) {
         Cloud.instancedMesh.setMatrixAt(instanceId, Cloud.tempMatrix);
@@ -144,9 +135,7 @@ export class Cloud {
       const ringHeight = baseHeight + maxAdditionalHeight * heightFactor;
 
       // Reduce clusters in distant rings
-      const ringClusters = Math.floor(
-        clustersPerRing * (1 - ringProgress * 0.3)
-      );
+      const ringClusters = Math.floor(clustersPerRing * (1 - ringProgress * 0.3));
 
       for (let i = 0; i < ringClusters; i++) {
         const angle = (i / ringClusters) * Math.PI * 2;
@@ -168,7 +157,7 @@ export class Cloud {
         const cloud = new Cloud({
           scene,
           position: Cloud.tempVector.clone(),
-          scale,
+          scale
         });
         clouds.push(cloud);
       }
@@ -231,10 +220,7 @@ export class Cloud {
 
       // Update opacity based on distance
       const instanceDistance = Cloud.tempVector.distanceTo(cameraPosition);
-      const opacity = Math.max(
-        0.1,
-        0.5 * (1 - Math.pow(instanceDistance / 10000, 2))
-      );
+      const opacity = Math.max(0.1, 0.5 * (1 - Math.pow(instanceDistance / 10000, 2)));
 
       if (Cloud.material) {
         Cloud.material.opacity = opacity;

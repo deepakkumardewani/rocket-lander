@@ -1,7 +1,8 @@
-import * as THREE from "three";
 import * as CANNON from "cannon-es";
-import { world, createPhysicsMaterial } from "../physics";
+import * as THREE from "three";
+
 import { handleRenderingError } from "../../utils/errorHandler";
+import { createPhysicsMaterial, world } from "../physics";
 
 /**
  * Parameters for creating a landing platform
@@ -47,7 +48,7 @@ export class Platform {
       const material = new THREE.MeshPhongMaterial({
         color,
         shininess: 10,
-        flatShading: false,
+        flatShading: false
       });
 
       // Apply texture if provided
@@ -67,15 +68,13 @@ export class Platform {
       this.platformMaterial = createPhysicsMaterial("platform", 0.3, 0.8);
 
       // Create physics body (mass = 0 makes it static)
-      const shape = new CANNON.Box(
-        new CANNON.Vec3(width / 2, height / 2, depth / 2)
-      );
+      const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2));
       this.body = new CANNON.Body({
         mass: 0, // Static body
         material: this.platformMaterial,
         shape: shape,
         position: new CANNON.Vec3(position.x, 2, position.z), // Match visual position
-        type: CANNON.Body.STATIC,
+        type: CANNON.Body.STATIC
       });
 
       // Add body to physics world

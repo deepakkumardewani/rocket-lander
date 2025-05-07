@@ -60,12 +60,12 @@ export class Nebula {
     colors = [
       new THREE.Color(0x4a00e0), // Purple
       new THREE.Color(0x0077ff), // Blue
-      new THREE.Color(0xff5588), // Pink
+      new THREE.Color(0xff5588) // Pink
     ],
     planeCount = 5,
     planeSize = 100,
     opacity = 0.15,
-    distribution = 40, // Distribution range in world units
+    distribution = 40 // Distribution range in world units
   }: {
     noiseTexture?: THREE.Texture | null;
     colors?: THREE.Color[];
@@ -106,7 +106,7 @@ export class Nebula {
           Math.random() * Math.PI * 2,
           Math.random() * Math.PI * 2,
           Math.random() * Math.PI * 2
-        ),
+        )
       });
 
       this.planes.push(plane);
@@ -154,7 +154,7 @@ export class Nebula {
     position = new THREE.Vector3(0, 0, -50),
     color = new THREE.Color(0x4a00e0),
     opacity = 0.15,
-    rotation = new THREE.Euler(0, 0, 0),
+    rotation = new THREE.Euler(0, 0, 0)
   }: {
     size?: number;
     position?: THREE.Vector3;
@@ -171,14 +171,14 @@ export class Nebula {
         noiseTexture: { value: this.noiseTexture },
         nebulaColor: { value: color },
         opacity: { value: opacity },
-        time: { value: 0 },
+        time: { value: 0 }
       },
       vertexShader: Nebula.nebulaVertexShader,
       fragmentShader: Nebula.nebulaFragmentShader,
       transparent: true,
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
-      depthWrite: false,
+      depthWrite: false
     });
 
     // Create mesh and set position/rotation

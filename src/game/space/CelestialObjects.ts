@@ -51,7 +51,7 @@ export class CelestialObjects {
     glowColor = 0x00bfff,
     glowIntensity = 1.0,
     glowPower = 2.5,
-    glowSize = 1.15,
+    glowSize = 1.15
   }: {
     radius?: number;
     position?: THREE.Vector3;
@@ -75,13 +75,13 @@ export class CelestialObjects {
       const texture = new THREE.TextureLoader().load(textureUrl);
       material = new THREE.MeshPhongMaterial({
         map: texture,
-        shininess: 15,
+        shininess: 15
       });
     } else {
       // Use basic color if no texture provided
       material = new THREE.MeshPhongMaterial({
         color,
-        shininess: 15,
+        shininess: 15
       });
     }
 
@@ -102,7 +102,7 @@ export class CelestialObjects {
         color: glowColor,
         size: glowSize,
         intensity: glowIntensity,
-        power: glowPower,
+        power: glowPower
       });
 
       this.glowEffects.push(glowMesh);
@@ -123,7 +123,7 @@ export class CelestialObjects {
       color = 0x00bfff,
       size = 1.15,
       intensity = 1.0,
-      power = 2.5,
+      power = 2.5
     }: {
       color?: number;
       size?: number;
@@ -147,14 +147,14 @@ export class CelestialObjects {
       uniforms: {
         glowColor: { value: new THREE.Color(color) },
         intensity: { value: intensity },
-        power: { value: power },
+        power: { value: power }
       },
       vertexShader: CelestialObjects.glowVertexShader,
       fragmentShader: CelestialObjects.glowFragmentShader,
       transparent: true,
       blending: THREE.AdditiveBlending,
       side: THREE.FrontSide,
-      depthWrite: false,
+      depthWrite: false
     });
 
     // Create the glow mesh
@@ -185,7 +185,7 @@ export class CelestialObjects {
       color: 0x3498db,
       glowColor: 0x4aa7e6,
       glowIntensity: 0.8,
-      glowPower: 2.0,
+      glowPower: 2.0
     });
 
     // Create a reddish-orange planet (e.g., Mars-like)
@@ -195,7 +195,7 @@ export class CelestialObjects {
       color: 0xe67e22,
       glowColor: 0xe74c3c,
       glowIntensity: 0.6,
-      glowPower: 2.2,
+      glowPower: 2.2
     });
 
     // Create a small moon
@@ -205,7 +205,7 @@ export class CelestialObjects {
       color: 0xaaaaaa,
       glowColor: 0xffffff,
       glowIntensity: 0.4,
-      glowPower: 3.0,
+      glowPower: 3.0
     });
 
     return this.planets;

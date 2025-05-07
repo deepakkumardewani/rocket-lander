@@ -35,14 +35,14 @@ export class StarField {
     { color: new THREE.Color(0xffffff), weight: 0.4 }, // White (A type)
     { color: new THREE.Color(0xffffaa), weight: 0.3 }, // Yellow (G type, like our Sun)
     { color: new THREE.Color(0xffcc88), weight: 0.1 }, // Orange (K type)
-    { color: new THREE.Color(0xff8866), weight: 0.05 }, // Red (M type)
+    { color: new THREE.Color(0xff8866), weight: 0.05 } // Red (M type)
   ];
 
   // Multiple layers for parallax
   private readonly layers = [
     { distance: 1.0, speedFactor: 1.0, count: 0.6 }, // Front layer (60% of stars)
     { distance: 1.5, speedFactor: 0.7, count: 0.3 }, // Middle layer (30% of stars)
-    { distance: 2.0, speedFactor: 0.4, count: 0.1 }, // Background layer (10% of stars)
+    { distance: 2.0, speedFactor: 0.4, count: 0.1 } // Background layer (10% of stars)
   ];
 
   /**
@@ -62,7 +62,7 @@ export class StarField {
     maxSize = 0.5,
     movementSpeed = 0.01,
     movementPattern = "radial",
-    texture = null,
+    texture = null
   }: {
     starCount?: number;
     radius?: number;
@@ -115,7 +115,7 @@ export class StarField {
       transparent: true,
       opacity: 1,
       blending: THREE.AdditiveBlending,
-      depthWrite: false,
+      depthWrite: false
     });
 
     // Apply texture if provided
@@ -130,7 +130,7 @@ export class StarField {
       size: this.maxSize,
       sizeAttenuation: true,
       vertexColors: true,
-      hasTexture: !!this.texture,
+      hasTexture: !!this.texture
     });
 
     return material;
@@ -208,35 +208,27 @@ export class StarField {
         // Set size based on layer and some randomness
         this.sizes[currentStar] =
           this.minSize +
-          (this.maxSize - this.minSize) *
-            (0.7 + Math.random() * 0.3) *
-            (1 / layer.distance);
+          (this.maxSize - this.minSize) * (0.7 + Math.random() * 0.3) * (1 / layer.distance);
 
         // Set velocity based on movement pattern and layer speed
         const speedFactor = layer.speedFactor;
         if (this.movementPattern === "radial") {
           // Radial movement - stars move outward from center with varying speeds
-          const magnitude =
-            (0.5 + Math.random() * 0.5) * this.movementSpeed * 5 * speedFactor;
+          const magnitude = (0.5 + Math.random() * 0.5) * this.movementSpeed * 5 * speedFactor;
           this.velocities[idx] = (x / radius) * magnitude;
           this.velocities[idx + 1] = (y / radius) * magnitude;
           this.velocities[idx + 2] = (z / radius) * magnitude;
         } else if (this.movementPattern === "directional") {
           // Directional movement - stars move in a more unified direction
-          this.velocities[idx] =
-            (Math.random() - 0.3) * this.movementSpeed * 3 * speedFactor;
+          this.velocities[idx] = (Math.random() - 0.3) * this.movementSpeed * 3 * speedFactor;
           this.velocities[idx + 1] =
             (0.7 + Math.random() * 0.3) * this.movementSpeed * 3 * speedFactor;
-          this.velocities[idx + 2] =
-            (Math.random() - 0.3) * this.movementSpeed * 3 * speedFactor;
+          this.velocities[idx + 2] = (Math.random() - 0.3) * this.movementSpeed * 3 * speedFactor;
         } else {
           // Twinkling - minimal movement but more variance
-          this.velocities[idx] =
-            (Math.random() - 0.5) * this.movementSpeed * speedFactor;
-          this.velocities[idx + 1] =
-            (Math.random() - 0.5) * this.movementSpeed * speedFactor;
-          this.velocities[idx + 2] =
-            (Math.random() - 0.5) * this.movementSpeed * speedFactor;
+          this.velocities[idx] = (Math.random() - 0.5) * this.movementSpeed * speedFactor;
+          this.velocities[idx + 1] = (Math.random() - 0.5) * this.movementSpeed * speedFactor;
+          this.velocities[idx + 2] = (Math.random() - 0.5) * this.movementSpeed * speedFactor;
         }
 
         currentStar++;
@@ -244,23 +236,12 @@ export class StarField {
     }
 
     // Set attributes
-    this.geometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(this.positions, 3)
-    );
-    this.geometry.setAttribute(
-      "color",
-      new THREE.BufferAttribute(this.colors, 3)
-    );
-    this.geometry.setAttribute(
-      "size",
-      new THREE.BufferAttribute(this.sizes, 1)
-    );
+    this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
+    this.geometry.setAttribute("color", new THREE.BufferAttribute(this.colors, 3));
+    this.geometry.setAttribute("size", new THREE.BufferAttribute(this.sizes, 1));
 
     // Log star generation
-    console.log(
-      `Generated ${this.starCount} stars in spherical distribution with layering`
-    );
+    console.log(`Generated ${this.starCount} stars in spherical distribution with layering`);
   }
 
   /**
@@ -291,14 +272,11 @@ export class StarField {
       const oscillation = Math.sin(this.time * 0.3 + i * 0.02) * 0.08;
 
       // Apply velocity to position with oscillation
-      positions[idx] +=
-        (this.velocities[idx] + this.velocities[idx] * oscillation) * deltaTime;
+      positions[idx] += (this.velocities[idx] + this.velocities[idx] * oscillation) * deltaTime;
       positions[idx + 1] +=
-        (this.velocities[idx + 1] + this.velocities[idx + 1] * oscillation) *
-        deltaTime;
+        (this.velocities[idx + 1] + this.velocities[idx + 1] * oscillation) * deltaTime;
       positions[idx + 2] +=
-        (this.velocities[idx + 2] + this.velocities[idx + 2] * oscillation) *
-        deltaTime;
+        (this.velocities[idx + 2] + this.velocities[idx + 2] * oscillation) * deltaTime;
 
       // Check if star is too far from center
       const x = positions[idx];
@@ -328,28 +306,20 @@ export class StarField {
         // Make more stars twinkle by using modulo with twinkleFrequency
         if (
           i % Math.max(2, Math.floor(4 / this.twinkleFrequency)) ===
-          Math.floor(this.time * 5) %
-            Math.max(2, Math.floor(4 / this.twinkleFrequency))
+          Math.floor(this.time * 5) % Math.max(2, Math.floor(4 / this.twinkleFrequency))
         ) {
           // Calculate a new opacity value that oscillates with higher amplitude
           const opacityFactor =
-            0.5 +
-            Math.abs(Math.sin(this.time * 3 + i * 0.15)) *
-              0.5 *
-              this.glowIntensity;
+            0.5 + Math.abs(Math.sin(this.time * 3 + i * 0.15)) * 0.5 * this.glowIntensity;
           this.opacities[i] = opacityFactor;
 
           // Apply opacity to color with enhanced brightness
-          colors[idx] =
-            this.originalColors[idx] * opacityFactor * this.glowIntensity;
-          colors[idx + 1] =
-            this.originalColors[idx + 1] * opacityFactor * this.glowIntensity;
-          colors[idx + 2] =
-            this.originalColors[idx + 2] * opacityFactor * this.glowIntensity;
+          colors[idx] = this.originalColors[idx] * opacityFactor * this.glowIntensity;
+          colors[idx + 1] = this.originalColors[idx + 1] * opacityFactor * this.glowIntensity;
+          colors[idx + 2] = this.originalColors[idx + 2] * opacityFactor * this.glowIntensity;
 
           // Vary the size more dramatically for a more dynamic effect
-          sizes[i] =
-            this.sizes[i] * (0.7 + Math.sin(this.time * 1.5 + i) * 0.3);
+          sizes[i] = this.sizes[i] * (0.7 + Math.sin(this.time * 1.5 + i) * 0.3);
         }
       }
     }
@@ -403,10 +373,7 @@ export class StarField {
     }
 
     // Update the color attribute
-    this.geometry.setAttribute(
-      "color",
-      new THREE.BufferAttribute(this.colors, 3)
-    );
+    this.geometry.setAttribute("color", new THREE.BufferAttribute(this.colors, 3));
   }
 
   /**
@@ -443,9 +410,6 @@ export class StarField {
     }
 
     // Update the size attribute
-    this.geometry.setAttribute(
-      "size",
-      new THREE.BufferAttribute(this.sizes, 1)
-    );
+    this.geometry.setAttribute("size", new THREE.BufferAttribute(this.sizes, 1));
   }
 }

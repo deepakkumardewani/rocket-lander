@@ -72,7 +72,7 @@ export class Birds {
       position: startPosition.clone(),
       direction: this.direction.clone(),
       angle: Math.random() * Math.PI * 2,
-      speed: 20 * (0.8 + Math.random() * 0.4), // Random speed variation
+      speed: 20 * (0.8 + Math.random() * 0.4) // Random speed variation
     };
 
     // Create the birds in a V-formation
@@ -146,15 +146,12 @@ export class Birds {
       -2, // right back
       4,
       0,
-      2, // right front
+      2 // right front
     ]);
-    wingGeometry.setAttribute(
-      "position",
-      new THREE.BufferAttribute(wingVertices, 3)
-    );
+    wingGeometry.setAttribute("position", new THREE.BufferAttribute(wingVertices, 3));
     const wingMaterial = new THREE.MeshBasicMaterial({
       color: 0x555555,
-      side: THREE.DoubleSide,
+      side: THREE.DoubleSide
     });
     const wings = new THREE.Mesh(wingGeometry, wingMaterial);
     birdGroup.add(wings);
@@ -173,10 +170,7 @@ export class Birds {
    * Rotate a flock to face its direction of movement
    * @param flock The flock to rotate
    */
-  private rotateFlockToDirection(flock: {
-    group: THREE.Group;
-    direction: THREE.Vector3;
-  }): void {
+  private rotateFlockToDirection(flock: { group: THREE.Group; direction: THREE.Vector3 }): void {
     // Get the angle between the current direction and the target direction
     const targetAngle = Math.atan2(flock.direction.x, flock.direction.z);
 
@@ -192,9 +186,7 @@ export class Birds {
     // Update each flock
     this.flocks.forEach((flock) => {
       // Move the flock in its direction
-      const movement = flock.direction
-        .clone()
-        .multiplyScalar(flock.speed * deltaTime);
+      const movement = flock.direction.clone().multiplyScalar(flock.speed * deltaTime);
       flock.position.add(movement);
       flock.group.position.copy(flock.position);
 
@@ -218,10 +210,7 @@ export class Birds {
    * @param flock The flock to animate
    * @param deltaTime Time since last frame in seconds
    */
-  private animateBirdWings(
-    flock: { birds: THREE.Group[] },
-    deltaTime: number
-  ): void {
+  private animateBirdWings(flock: { birds: THREE.Group[] }, deltaTime: number): void {
     // Simple wing flapping for each bird
     flock.birds.forEach((bird) => {
       if (!bird.userData.flapAngle) {
