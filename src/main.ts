@@ -1,6 +1,8 @@
-import { createApp } from "vue";
 import { createPinia } from "pinia";
+import { createApp } from "vue";
+
 import App from "./App.vue";
+
 import { useGameStore } from "./stores/gameStore";
 
 const pinia = createPinia();

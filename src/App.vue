@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
-import GameCanvas from "./game/GameCanvas.vue";
+
 import EnvironmentSelector from "./components/EnvironmentSelector.vue";
+import TextureUnlockNotification from "./components/TextureUnlockNotification.vue";
+import GameCanvas from "./game/GameCanvas.vue";
+
 import { useGameStore } from "./stores/gameStore";
+
 const gameStore = useGameStore();
 
 // For debugging
@@ -18,9 +22,7 @@ watch(
 const showGameCanvas = computed(() => gameStore.showGameCanvas);
 
 // Show environment selector when no environment is selected
-const showEnvironmentSelector = computed(
-  () => gameStore.showGameCanvas === false
-);
+const showEnvironmentSelector = computed(() => gameStore.showGameCanvas === false);
 
 // Reset game to environment selection when game ends
 const resetToSelector = () => {
@@ -36,6 +38,9 @@ const resetToSelector = () => {
 
       <!-- Game Canvas -->
       <GameCanvas v-if="showGameCanvas" @game-end="resetToSelector" />
+
+      <!-- Unlock Notification -->
+      <TextureUnlockNotification />
     </div>
   </div>
 </template>

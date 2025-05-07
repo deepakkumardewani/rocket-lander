@@ -1,13 +1,15 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
+
+import { seaTexturesOptions, spaceTexturesOptions } from "../lib/config";
 import { handleAssetError } from "./errorHandler";
-import { spaceTexturesOptions, seaTexturesOptions } from "../lib/config";
+
 // Types of assets that can be loaded
 export enum AssetType {
   TEXTURE = "texture",
   MODEL = "model",
-  AUDIO = "audio",
+  AUDIO = "audio"
 }
 
 // Interface for asset data
@@ -86,8 +88,7 @@ export class AssetLoader {
   // Initialize audio context (must be called after user interaction)
   public initAudioContext(): void {
     try {
-      this.audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     } catch (error) {
       handleAssetError("Could not create audio context", error as Error);
     }
@@ -123,7 +124,7 @@ export class AssetLoader {
           resolve({
             key,
             type: AssetType.TEXTURE,
-            data: texture,
+            data: texture
           });
         },
         undefined,
@@ -159,7 +160,7 @@ export class AssetLoader {
             resolve({
               key,
               type: AssetType.MODEL,
-              data: model,
+              data: model
             });
           } catch (error) {
             handleAssetError(
@@ -184,10 +185,7 @@ export class AssetLoader {
             err instanceof Error ? err.message : String(err)
           }`;
           console.error("Model loading error details:", err);
-          handleAssetError(
-            errorMessage,
-            err instanceof Error ? err : new Error(String(err))
-          );
+          handleAssetError(errorMessage, err instanceof Error ? err : new Error(String(err)));
           reject(new Error(errorMessage));
         }
       );
@@ -203,10 +201,7 @@ export class AssetLoader {
 
         if (!this.audioContext) {
           const error = new Error("Audio context not available");
-          handleAssetError(
-            "Could not load audio: audio context not available",
-            error
-          );
+          handleAssetError("Could not load audio: audio context not available", error);
           reject(error);
           return;
         }
@@ -230,7 +225,7 @@ export class AssetLoader {
           resolve({
             key,
             type: AssetType.AUDIO,
-            data: audioBuffer,
+            data: audioBuffer
           });
         })
         .catch((error) => {
@@ -264,9 +259,7 @@ export class AssetLoader {
       const audioBuffer = this.audio.get(key);
 
       if (!audioBuffer || !this.audioContext) {
-        console.warn(
-          `Cannot play audio: ${key} - Asset or audio context not available`
-        );
+        console.warn(`Cannot play audio: ${key} - Asset or audio context not available`);
         return;
       }
 
@@ -391,7 +384,7 @@ export class AssetLoader {
         "/src/assets/skybox/space/top.png", // positive y
         "/src/assets/skybox/space/bottom.png", // negative y
         "/src/assets/skybox/space/front.png", // positive z
-        "/src/assets/skybox/space/back.png", // negative z
+        "/src/assets/skybox/space/back.png" // negative z
       ];
 
       // Load each texture separately
@@ -404,9 +397,7 @@ export class AssetLoader {
             },
             undefined,
             (error) => {
-              reject(
-                new Error(`Failed to load skybox texture: ${path} - ${error}`)
-              );
+              reject(new Error(`Failed to load skybox texture: ${path} - ${error}`));
             }
           );
         });
@@ -458,9 +449,7 @@ export class AssetLoader {
       // Load all platform textures
 
       const platformTextures = await Promise.all(
-        spaceTexturesOptions.map((texture) =>
-          this.textureLoader.loadAsync(texture.url)
-        )
+        spaceTexturesOptions.map((texture) => this.textureLoader.loadAsync(texture.url))
       );
       spaceTexturesOptions.forEach((texture, index) => {
         this.textures.set(texture.value, platformTextures[index]);
@@ -482,9 +471,7 @@ export class AssetLoader {
       // Load all boat textures
 
       const boatTextures = await Promise.all(
-        seaTexturesOptions.map((texture) =>
-          this.textureLoader.loadAsync(texture.url)
-        )
+        seaTexturesOptions.map((texture) => this.textureLoader.loadAsync(texture.url))
       );
 
       seaTexturesOptions.forEach((texture, index) => {
@@ -549,10 +536,7 @@ export class AssetLoader {
         );
       });
     } catch (error) {
-      console.warn(
-        "Error loading sea normal map, generating placeholder.",
-        error
-      );
+      console.warn("Error loading sea normal map, generating placeholder.", error);
 
       // Generate a placeholder normal map
       const placeholderTexture = this.generateSeaNormalTexture();
@@ -600,8 +584,7 @@ export class AssetLoader {
           const yDir = (x * sin + y * cos) * frequency;
 
           // Create wave pattern - combination of sine waves
-          const wave =
-            Math.sin(xDir + phase) * Math.sin(yDir + phase * 0.7) * amplitude;
+          const wave = Math.sin(xDir + phase) * Math.sin(yDir + phase * 0.7) * amplitude;
 
           // Get existing pixel data
           const imgData = ctx.getImageData(x, y, step, step);
@@ -610,14 +593,8 @@ export class AssetLoader {
           // Modify the normals based on wave pattern
           for (let i = 0; i < step * step * 4; i += 4) {
             // Add wave effect to existing normal
-            imgData.data[i] = Math.max(
-              0,
-              Math.min(255, imgData.data[i] + wave * cos * 15)
-            );
-            imgData.data[i + 1] = Math.max(
-              0,
-              Math.min(255, imgData.data[i + 1] + wave * sin * 15)
-            );
+            imgData.data[i] = Math.max(0, Math.min(255, imgData.data[i] + wave * cos * 15));
+            imgData.data[i + 1] = Math.max(0, Math.min(255, imgData.data[i + 1] + wave * sin * 15));
 
             // Z component (blue) - adjust based on slope for realistic normals
             // (higher areas have more upward-facing normals)
@@ -625,10 +602,7 @@ export class AssetLoader {
             const slopeY = sin * Math.cos(yDir + phase * 0.7) * amplitude * 0.2;
             const slopeLen = Math.sqrt(slopeX * slopeX + slopeY * slopeY);
 
-            imgData.data[i + 2] = Math.max(
-              0,
-              Math.min(255, 255 - slopeLen * 40)
-            );
+            imgData.data[i + 2] = Math.max(0, Math.min(255, 255 - slopeLen * 40));
           }
 
           ctx.putImageData(imgData, x, y);
@@ -707,10 +681,7 @@ export class AssetLoader {
    * @param key Optional key to cache the model under
    * @returns Promise resolving to the loaded model
    */
-  public async getOrLoadModelByUrl(
-    url: string,
-    key: string
-  ): Promise<THREE.Object3D> {
+  public async getOrLoadModelByUrl(url: string, key: string): Promise<THREE.Object3D> {
     try {
       // Always load the model fresh to ensure we get the latest version
       const result = await this.loadModel(url, key);

@@ -6,7 +6,7 @@ export enum ErrorType {
   PHYSICS = "physics",
   INPUT = "input",
   ASSET = "asset",
-  GENERAL = "general",
+  GENERAL = "general"
 }
 
 /**
@@ -33,24 +33,16 @@ function getTimestamp(): string {
  * @param originalError The original error object (optional)
  * @returns The error data object
  */
-export function logError(
-  type: ErrorType,
-  message: string,
-  originalError?: Error
-): ErrorData {
+export function logError(type: ErrorType, message: string, originalError?: Error): ErrorData {
   const errorData: ErrorData = {
     type,
     message,
     originalError,
-    timestamp: getTimestamp(),
+    timestamp: getTimestamp()
   };
 
   // Log to console with formatting
-  console.error(
-    `[${errorData.timestamp}] [${errorData.type.toUpperCase()}] ${
-      errorData.message
-    }`
-  );
+  console.error(`[${errorData.timestamp}] [${errorData.type.toUpperCase()}] ${errorData.message}`);
 
   if (originalError) {
     console.error("Original error:", originalError);
@@ -76,9 +68,7 @@ export function displayErrorMessage(message: string): void {
  */
 export function handleRenderingError(message: string, error?: Error): void {
   logError(ErrorType.RENDERING, message, error);
-  displayErrorMessage(
-    "Failed to render graphics properly. Please refresh the page."
-  );
+  displayErrorMessage("Failed to render graphics properly. Please refresh the page.");
 }
 
 /**
@@ -88,9 +78,7 @@ export function handleRenderingError(message: string, error?: Error): void {
  */
 export function handlePhysicsError(message: string, error?: Error): void {
   logError(ErrorType.PHYSICS, message, error);
-  displayErrorMessage(
-    "Physics simulation error. Game behavior may be unpredictable."
-  );
+  displayErrorMessage("Physics simulation error. Game behavior may be unpredictable.");
 }
 
 /**
@@ -110,9 +98,7 @@ export function handleInputError(message: string, error?: Error): void {
  */
 export function handleAssetError(message: string, error?: Error): void {
   logError(ErrorType.ASSET, message, error);
-  displayErrorMessage(
-    "Failed to load game assets. Please check your connection and refresh."
-  );
+  displayErrorMessage("Failed to load game assets. Please check your connection and refresh.");
 }
 
 /**

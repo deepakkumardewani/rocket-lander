@@ -22,7 +22,7 @@ const logger = {
     } else {
       console.error(`[ERROR] ${message}`);
     }
-  },
+  }
 };
 
 export default logger;
