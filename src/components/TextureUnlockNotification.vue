@@ -2,8 +2,11 @@
 import { Rocket } from "lucide-vue-next";
 import { computed, onMounted, ref, watch } from "vue";
 
-import { seaTexturesOptions, spaceTexturesOptions } from "../lib/config";
+import type { TextureType } from "../types/storeTypes";
+
 import { useGameStore } from "../stores/gameStore";
+
+import { seaTexturesOptions, spaceTexturesOptions } from "../lib/textureConfig";
 
 const gameStore = useGameStore();
 const isVisible = computed(() => gameStore.textureUnlockNotification.show);
@@ -16,7 +19,7 @@ const animationComplete = ref(false);
 
 // Get texture names for display
 const textureNames = computed(() => {
-  return unlockedTextures.value.map((texture) => {
+  return unlockedTextures.value.map((texture: TextureType) => {
     if (environment.value === "sea") {
       const found = seaTexturesOptions.find((opt) => opt.value === texture);
       return found ? found.label : texture;
