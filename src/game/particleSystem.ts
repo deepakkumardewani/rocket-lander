@@ -12,6 +12,11 @@ export interface ParticleSystemParams {
   lifetime?: number; // Maximum lifetime of particles in seconds
   texture?: THREE.Texture; // Optional texture for particles
   maxParticlesPerFrame?: number; // Maximum particles to spawn per frame
+  colorVariation?: boolean; // Enable color variation
+  colorRange?: [number, number]; // Range of colors for variation [start, end]
+  sizeVariation?: [number, number]; // Range of sizes for variation [min, max]
+  alphaVariation?: boolean; // Enable alpha variation
+  alphaRange?: [number, number]; // Range of alpha values [min, max]
 }
 
 /**
@@ -37,6 +42,12 @@ export class ParticleSystem {
   private lastCameraPosition: THREE.Vector3 = new THREE.Vector3();
   private boundingSphere: THREE.Sphere = new THREE.Sphere(new THREE.Vector3(), 100);
   private inFrustum: boolean = true;
+  private colorVariation: boolean;
+  private colorRange: [number, number];
+  private sizeVariation: [number, number];
+  private alphaVariation: boolean;
+  private alphaRange: [number, number];
+  private baseColor: THREE.Color;
 
   /**
    * Create a new particle system
@@ -50,6 +61,14 @@ export class ParticleSystem {
       const size = params.size || 0.2;
       const lifetime = params.lifetime || 2; // 2 seconds default lifetime
       this.maxParticlesPerFrame = params.maxParticlesPerFrame || 10;
+
+      // Store variation parameters
+      this.colorVariation = params.colorVariation || false;
+      this.colorRange = params.colorRange || [color, color];
+      this.sizeVariation = params.sizeVariation || [size, size];
+      this.alphaVariation = params.alphaVariation || false;
+      this.alphaRange = params.alphaRange || [1, 1];
+      this.baseColor = new THREE.Color(color);
 
       // Create buffer geometry for particles
       this.geometry = new THREE.BufferGeometry();
@@ -70,7 +89,7 @@ export class ParticleSystem {
         // Set all particles to inactive initially
         this.lifetimes[i] = 0;
         this.maxLifetimes[i] = lifetime * (0.8 + Math.random() * 0.4); // Slight randomness in max lifetime
-        sizes[i] = size * (0.8 + Math.random() * 0.4); // Slight randomness in size
+        sizes[i] = this.getRandomSize(); // Use size variation
         opacities[i] = 0; // Start with invisible particles
       }
 
@@ -84,16 +103,24 @@ export class ParticleSystem {
       this.opacityAttribute = new THREE.BufferAttribute(opacities, 1);
       this.geometry.setAttribute("opacity", this.opacityAttribute);
 
-      // Create shader material with custom uniforms for opacity
+      // Create shader material with custom uniforms for color variation
       this.material = new THREE.ShaderMaterial({
         uniforms: {
-          pointTexture: { value: params.texture ? params.texture : null },
-          color: { value: new THREE.Color(color) }
+          pointTexture: { value: params.texture || null },
+          baseColor: { value: this.baseColor },
+          colorRange: {
+            value: new THREE.Vector3(
+              (this.colorRange[1] >> 16) & 255,
+              (this.colorRange[1] >> 8) & 255,
+              this.colorRange[1] & 255
+            ).divideScalar(255)
+          }
         },
         vertexShader: `
           attribute float size;
           attribute float opacity;
           varying float vOpacity;
+          varying float vLifeRatio;
           void main() {
             vOpacity = opacity;
             vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
@@ -102,16 +129,15 @@ export class ParticleSystem {
           }
         `,
         fragmentShader: `
-          uniform vec3 color;
+          uniform vec3 baseColor;
+          uniform vec3 colorRange;
           uniform sampler2D pointTexture;
           varying float vOpacity;
           void main() {
+            vec3 color = baseColor;
+            ${this.colorVariation ? "color = mix(baseColor, colorRange, vOpacity);" : ""}
             gl_FragColor = vec4(color, vOpacity);
-            ${
-              params.texture
-                ? "gl_FragColor = gl_FragColor * texture2D(pointTexture, gl_PointCoord);"
-                : ""
-            }
+            ${params.texture ? "gl_FragColor = gl_FragColor * texture2D(pointTexture, gl_PointCoord);" : ""}
             if (gl_FragColor.a < 0.1) discard;
           }
         `,
@@ -127,6 +153,17 @@ export class ParticleSystem {
       handleRenderingError("Failed to create particle system", error as Error);
       throw error;
     }
+  }
+
+  private getRandomSize(): number {
+    return this.sizeVariation[0] + Math.random() * (this.sizeVariation[1] - this.sizeVariation[0]);
+  }
+
+  private getRandomAlpha(): number {
+    if (this.alphaVariation) {
+      return this.alphaRange[0] + Math.random() * (this.alphaRange[1] - this.alphaRange[0]);
+    }
+    return 1;
   }
 
   /**
@@ -204,12 +241,10 @@ export class ParticleSystem {
     if (!this.isEnabled) return;
 
     try {
-      // Limit particles per frame for better performance
       const particlesToSpawn = Math.min(count, this.maxParticlesPerFrame);
-      let spawned = 0; // Initialize the spawned counter
+      let spawned = 0;
 
       for (let i = 0; i < this.count && spawned < particlesToSpawn; i++) {
-        // Only spawn if particle is inactive
         if (this.lifetimes[i] <= 0) {
           // Position
           this.positions[i * 3] = position.x;
@@ -217,17 +252,15 @@ export class ParticleSystem {
           this.positions[i * 3 + 2] = position.z;
 
           // Randomize direction within spread angle
-          const angle1 = Math.random() * Math.PI * 2; // Random angle around y-axis
-          const angle2 = Math.random() * spread; // Random angle within spread cone
+          const angle1 = Math.random() * Math.PI * 2;
+          const angle2 = Math.random() * spread;
 
-          // Create a random direction within the cone
           const dirX = direction.x + Math.sin(angle2) * Math.cos(angle1);
           const dirY = direction.y + Math.sin(angle2) * Math.sin(angle1);
           const dirZ = direction.z + Math.cos(angle2);
 
-          // Normalize and scale by speed
           const length = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
-          const speedMultiplier = speed * (0.8 + Math.random() * 0.4); // Randomize speed slightly
+          const speedMultiplier = speed * (0.8 + Math.random() * 0.4);
 
           this.velocities[i * 3] = (dirX / length) * speedMultiplier;
           this.velocities[i * 3 + 1] = (dirY / length) * speedMultiplier;
@@ -236,17 +269,17 @@ export class ParticleSystem {
           // Reset lifetime
           this.lifetimes[i] = this.maxLifetimes[i];
 
-          // Set opacity to full
-          this.opacityAttribute.array[i] = 1;
+          // Set size and opacity with variation
+          this.sizeAttribute.array[i] = this.getRandomSize();
+          this.opacityAttribute.array[i] = this.getRandomAlpha();
 
           spawned++;
         }
       }
 
-      // Only update if we spawned particles
       if (spawned > 0) {
-        // Notify Three.js that the attributes need to be updated
         this.positionAttribute.needsUpdate = true;
+        this.sizeAttribute.needsUpdate = true;
         this.opacityAttribute.needsUpdate = true;
       }
     } catch (error) {
