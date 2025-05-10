@@ -1,18 +1,25 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
 
-import { useGameStore } from "../stores/gameStore";
 import type { LandingMetrics } from "../types/storeTypes";
+
+import { useGameStore } from "../stores/gameStore";
+
 import { handlePhysicsError } from "../utils/errorHandler";
-import { ParticleSystem } from "./ParticleSystem";
+
+import {
+  createCrashEffect,
+  disposeCrashEffects,
+  getCrashEffectMeshes,
+  initCrashEffects,
+  updateCrashEffects
+} from "./enhancedCrashEffect";
+// import { ParticleSystem } from "./particleSystem";
 import { onCollision } from "./physics";
 
 // Constants for successful landing criteria
 const MAX_LANDING_VELOCITY = 5; // Maximum vertical velocity for a safe landing (m/s)
 const MAX_LANDING_ANGLE = 5; // Maximum angle from vertical for a safe landing (degrees)
-
-// Crash particle system for reuse across all collisions
-let crashParticles: ParticleSystem | null = null;
 
 // Map to track objects that should be treated as landing platforms
 const landingTargets = new Map<CANNON.Body, boolean>();
@@ -126,15 +133,8 @@ export function setupCollisionDetection(
   // Register the platform as a landing target by default
   registerLandingTarget(platformBody, true);
 
-  // Initialize crash particle system if not already created
-  if (!crashParticles) {
-    crashParticles = new ParticleSystem({
-      count: 150,
-      color: 0xff0000, // Red color for crash
-      size: 0.3,
-      lifetime: 1.5 // Longer lifetime for crash effect
-    });
-  }
+  // Initialize enhanced crash effects
+  initCrashEffects();
 
   try {
     // Set up rocket collision event listener
@@ -162,15 +162,26 @@ export function setupCollisionDetection(
           // Store the landing metrics for crash display
           gameStore.calculateScore(landingResult.metrics);
 
-          // Spawn crash particles
-          if (crashParticles) {
-            const position = new THREE.Vector3(
-              rocketBody.position.x,
-              rocketBody.position.y,
-              rocketBody.position.z
-            );
+          // Get rocket mesh from userData
+          const rocketMesh = (rocketBody as any).userData?.owner?.mesh;
+          const scene = rocketMesh?.parent;
 
-            crashParticles.spawn(position, new THREE.Vector3(0, 1, 0), Math.PI, 5, 100);
+          // Create enhanced crash effect
+          const position = new THREE.Vector3(
+            rocketBody.position.x,
+            rocketBody.position.y,
+            rocketBody.position.z
+          );
+
+          createCrashEffect({
+            position,
+            rocketMesh,
+            scene
+          });
+
+          // Hide the original rocket mesh
+          if (rocketMesh) {
+            rocketMesh.visible = false;
           }
 
           // Call crash callback if provided
@@ -215,22 +226,26 @@ export function setupCollisionDetection(
           // Store the landing metrics for crash display
           gameStore.calculateScore(landingResult.metrics);
 
-          // Spawn crash particles at the rocket's position
-          if (crashParticles) {
-            const position = new THREE.Vector3(
-              rocketBody.position.x,
-              rocketBody.position.y,
-              rocketBody.position.z
-            );
+          // Get rocket mesh from userData
+          const rocketMesh = (rocketBody as any).userData?.owner?.mesh;
+          const scene = rocketMesh?.parent;
 
-            // Spawn particles in all directions (explosion-like)
-            crashParticles.spawn(
-              position,
-              new THREE.Vector3(0, 1, 0), // Direction doesn't matter as much with wide spread
-              Math.PI, // Full 180-degree spread for explosion effect
-              5, // Higher speed for explosion
-              100 // Spawn many particles for dramatic effect
-            );
+          // Create enhanced crash effect
+          const position = new THREE.Vector3(
+            rocketBody.position.x,
+            rocketBody.position.y,
+            rocketBody.position.z
+          );
+
+          createCrashEffect({
+            position,
+            rocketMesh,
+            scene
+          });
+
+          // Hide the original rocket mesh
+          if (rocketMesh) {
+            rocketMesh.visible = false;
           }
 
           // Call crash callback if provided
@@ -265,15 +280,26 @@ export function setupCollisionDetection(
             : "Rocket crashed into terrain or other object"
         );
 
-        // Spawn crash particles
-        if (crashParticles) {
-          const position = new THREE.Vector3(
-            rocketBody.position.x,
-            rocketBody.position.y,
-            rocketBody.position.z
-          );
+        // Get rocket mesh from userData
+        const rocketMesh = (rocketBody as any).userData?.owner?.mesh;
+        const scene = rocketMesh?.parent;
 
-          crashParticles.spawn(position, new THREE.Vector3(0, 1, 0), Math.PI, 5, 100);
+        // Create enhanced crash effect
+        const position = new THREE.Vector3(
+          rocketBody.position.x,
+          rocketBody.position.y,
+          rocketBody.position.z
+        );
+
+        createCrashEffect({
+          position,
+          rocketMesh,
+          scene
+        });
+
+        // Hide the original rocket mesh
+        if (rocketMesh) {
+          rocketMesh.visible = false;
         }
 
         // Call crash callback if provided
@@ -314,9 +340,39 @@ export function registerCollisionHandlers(
 }
 
 /**
- * Get the crash particle system
- * @returns The crash particle system or null if not created
+ * Get the meshes for crash effects to add to the scene
+ * @returns Array of THREE.Object3D instances
  */
-export function getCrashParticles(): ParticleSystem | null {
-  return crashParticles;
+export function getCrashParticlesAndFragments(): THREE.Object3D[] {
+  return getCrashEffectMeshes();
+}
+
+/**
+ * Update crash effects (particles and fragments)
+ * @param deltaTime Time since last update in seconds
+ * @param camera Camera for frustum culling
+ */
+export function updateCrashParticlesAndFragments(deltaTime: number, camera: THREE.Camera): void {
+  updateCrashEffects(deltaTime, camera);
+}
+
+/**
+ * Clean up all crash effect resources
+ */
+export function cleanupCrashEffects(): void {
+  disposeCrashEffects();
+}
+
+/**
+ * Resets the rocket visibility after a crash
+ * @param rocketBody The rocket's physics body
+ */
+export function resetRocketVisibility(rocketBody: CANNON.Body): void {
+  // Get rocket mesh from userData
+  const rocketMesh = (rocketBody as any).userData?.owner?.mesh;
+
+  // Make rocket visible again
+  if (rocketMesh) {
+    rocketMesh.visible = true;
+  }
 }
