@@ -5,16 +5,15 @@ import ControlsHint from "./ControlsHint.vue";
 import FuelGauge from "./FuelGauge.vue";
 import GameResults from "./GameResults.vue";
 import LevelInfoBar from "./LevelInfoBar.vue";
-// import RocketSelector from './RocketSelector.vue'
-import StatusBar from "./StatusBar.vue";
+import VelocityIndicator from "./VelocityIndicator.vue";
 import ZoomControl from "./ZoomControl.vue";
 
-import type { SceneManager } from "../../game/sceneManager";
+// import type { SceneManager } from "../../game/sceneManager";
 
 // Define props
-defineProps<{
-  sceneManager: SceneManager;
-}>();
+// defineProps<{
+//   sceneManager: SceneManager;
+// }>();
 
 // Reference to the zoom control component
 const zoomControlRef = ref();
@@ -24,7 +23,7 @@ const updateZoomFromCamera = (cameraDistance: number) => {
   zoomControlRef.value?.updateZoomFromCamera(cameraDistance);
 };
 
-// Expose the method to parent components
+// Expose the methods to parent components
 defineExpose({
   updateZoomFromCamera
 });
@@ -36,11 +35,12 @@ defineExpose({
   >
     <!-- <RocketSelector /> -->
     <LevelInfoBar />
-    <StatusBar />
+    <!-- <StatusBar /> -->
+    <VelocityIndicator />
     <FuelGauge />
     <GameResults />
     <ControlsHint />
-    <ZoomControl ref="zoomControlRef" :scene-manager="sceneManager" />
+    <ZoomControl ref="zoomControlRef" />
   </div>
 </template>
 

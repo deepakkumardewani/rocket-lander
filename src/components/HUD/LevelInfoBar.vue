@@ -2,8 +2,9 @@
 import { storeToRefs } from "pinia";
 import { computed } from "vue";
 
-import { seaLevels, spaceLevels } from "../../game/levels";
 import { useGameStore } from "../../stores/gameStore";
+
+import { seaLevels, spaceLevels } from "../../lib/levelConfig";
 
 const gameStore = useGameStore();
 const { environment, currentLevel } = storeToRefs(gameStore);

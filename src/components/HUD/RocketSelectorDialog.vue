@@ -3,10 +3,13 @@ import { ArrowLeft, ArrowRight, X } from "lucide-vue-next";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { vue3dLoader } from "vue-3d-loader";
 
-import { rocketModels } from "../../lib/config";
-import { useGameStore } from "../../stores/gameStore";
 import type { RocketModel } from "../../types/storeTypes";
+
+import { useGameStore } from "../../stores/gameStore";
+
 import { assetLoader } from "../../utils/assetLoader";
+
+import { rocketModels } from "../../lib/rocketConfig";
 
 const gameStore = useGameStore();
 
@@ -25,14 +28,6 @@ const rotation = ref({
   y: 0,
   z: 0
 });
-// const viewerControls = ref({
-//   rotation: { x: 0, y: 0, z: 0 },
-//   position: { x: 0, y: 0, z: 0 },
-//   scale: { x: 1, y: 1, z: 1 },
-//   autoRotate: true,
-//   autoRotateSpeed: 1,
-//   zoom: 1
-// })
 
 // Compute the currently displayed model
 const currentModel = computed(() => rocketModels[currentIndex.value]);
