@@ -9,11 +9,11 @@
   "importOrderSortSpecifiers": true,
   "importOrder": [
     "<THIRD_PARTY_MODULES>",
-    "^@/types",
-    "^@/stores",
-    "^@/composables",
-    "^@/components",
-    "^@/utils",
+    "../types",
+    "../stores",
+    "../composables",
+    "../components",
+    "../utils",
     ".vue$",
     ".scss$",
     "^[./]"
