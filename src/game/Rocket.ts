@@ -1,12 +1,15 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
 
-import { ROCKET_MODELS_CONFIG } from "../lib/config";
-import { useGameStore } from "../stores/gameStore";
 import type { RocketModelConfig, RocketParams } from "../types/rocketTypes";
+
+import { useGameStore } from "../stores/gameStore";
+
 import { assetLoader } from "../utils/assetLoader";
 import { handlePhysicsError, handleRenderingError } from "../utils/errorHandler";
-import { ParticleSystem } from "./ParticleSystem";
+
+import { ROCKET_MODELS_CONFIG } from "../lib/rocketConfig";
+import { ParticleSystem } from "./particleSystem";
 import { createPhysicsMaterial, world } from "./physics";
 
 /**
