@@ -1,8 +1,6 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-import { seaLevels, spaceLevels } from "../game/levels";
-import { rocketModels } from "../lib/config";
 import type {
   Environment,
   GameState,
@@ -14,7 +12,11 @@ import type {
   TextureUnlockTiers,
   UnlockedTextures
 } from "../types/storeTypes";
+
 import indexedDBService from "../utils/indexedDBService";
+
+import { seaLevels, spaceLevels } from "../lib/levelConfig";
+import { rocketModels } from "../lib/rocketConfig";
 
 // Define the texture unlock tiers
 const textureUnlockTiers: TextureUnlockTiers = {
@@ -44,8 +46,9 @@ export const useGameStore = defineStore("game", () => {
   const currentLevel = ref<number>(1);
   const isLevelCompleted = ref<boolean>(false);
   const crashMetrics = ref<LandingMetrics | null>(null);
+  const landingMetrics = ref<LandingMetrics | null>(null);
   const shouldResetRocket = ref<boolean>(false);
-  const rocketModel = ref<RocketModel>(rocketModels[2]);
+  const rocketModel = ref<RocketModel>(rocketModels[0]);
   const rocketModelUrl = ref<string>(rocketModel.value.url);
 
   // Texture unlocking
@@ -260,7 +263,7 @@ export const useGameStore = defineStore("game", () => {
 
     // Calculate the total score
     score.value = Math.round(positionPrecision + fuelBonus + velocityBonus);
-
+    landingMetrics.value = metrics;
     return score.value;
   }
 
@@ -434,6 +437,7 @@ export const useGameStore = defineStore("game", () => {
     currentLevel,
     isLevelCompleted,
     crashMetrics,
+    landingMetrics,
     totalLevels,
     shouldResetRocket,
     rocketModelUrl,

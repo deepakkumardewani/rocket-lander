@@ -3,10 +3,22 @@ import * as CANNON from "cannon-es";
 import * as THREE from "three";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
+import { useGameStore } from "../stores/gameStore";
+import { useHudStore } from "../stores/hudStore";
+
 import EffectsPanel from "../components/EffectsPanel.vue";
 import HUD from "../components/HUD/HUD.vue";
 import RocketSelector from "../components/HUD/RocketSelector.vue";
+import TextureSelector from "../components/HUD/TextureSelector.vue";
 import LoadingScreen from "../components/LoadingScreen.vue";
+
+import { AssetType, assetLoader } from "../utils/assetLoader";
+import {
+  ErrorType,
+  handleAssetError,
+  handleRenderingError,
+  withErrorHandling
+} from "../utils/errorHandler";
 
 import {
   FUEL_CONSUMPTION_RATE,
@@ -15,14 +27,8 @@ import {
   ROTATION_SPEED,
   THRUST_FORCE
 } from "../constants";
-import { useGameStore } from "../stores/gameStore";
-import { AssetType, assetLoader } from "../utils/assetLoader";
-import {
-  ErrorType,
-  handleAssetError,
-  handleRenderingError,
-  withErrorHandling
-} from "../utils/errorHandler";
+import { seaLevels, spaceLevels } from "../lib/levelConfig";
+import type { LevelConfig } from "../lib/levelConfig";
 import { Platform } from "./Platform";
 import { Rocket } from "./Rocket";
 import {
@@ -31,8 +37,6 @@ import {
   registerLandingTarget
 } from "./collisionHandler";
 import inputHandler from "./inputHandler";
-import { seaLevels, spaceLevels } from "./levels";
-import type { LevelConfig } from "./levels";
 import {
   disposePhysics,
   setGravity,
@@ -52,7 +56,7 @@ const emit = defineEmits<{
 
 const isDevelopment = import.meta.env.DEV;
 const gameStore = useGameStore();
-
+const hudStore = useHudStore();
 // Create refs for the scene elements
 const canvasContainer = ref<HTMLDivElement | null>(null);
 const isLoading = ref(true);
@@ -552,6 +556,15 @@ const initializeGameScene = async () => {
           const rocketBody = rocket.getBody();
           const currentVelY = rocketBody.velocity.y;
 
+          // Pass velocity data to HUD if it exists
+          if (hudRef.value) {
+            hudStore.rocketVelocity = {
+              x: rocketBody.velocity.x,
+              y: rocketBody.velocity.y,
+              z: rocketBody.velocity.z
+            };
+          }
+
           // If rocket is descending (negative velocity) and then suddenly slows down (approaching platform)
           // This indicates it might be approaching the landing pad
           if (
@@ -562,6 +575,9 @@ const initializeGameScene = async () => {
           }
 
           lastRocketVelocityY = currentVelY;
+        } else if (hudRef.value) {
+          // Reset velocity display to zero when not flying
+          hudStore.rocketVelocity = { x: 0, y: 0, z: 0 };
         }
 
         // Process input
@@ -1409,6 +1425,8 @@ frameCount++;
       <div v-if="!isLoading" class="back-button" @click="emit('game-end')">Change Environment</div>
 
       <RocketSelector v-if="!isLoading" />
+
+      <TextureSelector v-if="!isLoading" />
     </div>
   </div>
 </template>
