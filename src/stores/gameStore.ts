@@ -19,7 +19,7 @@ import { seaLevels, spaceLevels } from "../lib/levelConfig";
 import { rocketModels } from "../lib/rocketConfig";
 
 // Define the texture unlock tiers
-const textureUnlockTiers: TextureUnlockTiers = {
+export const textureUnlockTiers: TextureUnlockTiers = {
   sea: {
     tier1: ["boat_1"],
     tier2: ["boat_2", "boat_3"]

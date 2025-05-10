@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, X } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, Lock, X } from "lucide-vue-next";
 import { computed, ref } from "vue";
 
 import type { TextureType } from "../../types/storeTypes";
 
-import { useGameStore } from "../../stores/gameStore";
+import { textureUnlockTiers, useGameStore } from "../../stores/gameStore";
 
 import { seaTexturesOptions, spaceTexturesOptions } from "../../lib/textureConfig";
 
@@ -27,6 +27,45 @@ const isLast = computed(() => currentIndex.value === texturesOptions.value.lengt
 
 // Check if current texture is selected
 const isSelected = computed(() => currentTexture.value.value === gameStore.textureChoice);
+
+// Check if current texture is unlocked
+const isUnlocked = computed(() =>
+  gameStore.isTextureUnlocked(currentTexture.value.value as TextureType, gameStore.environment)
+);
+
+// Determine the unlock tier for the current texture
+const unlockTier = computed(() => {
+  const textureValue = currentTexture.value.value as TextureType;
+  const env = gameStore.environment;
+
+  if (isUnlocked.value) {
+    return null; // Already unlocked
+  }
+
+  // Check if it's in tier 1
+  if (env === "sea" && textureUnlockTiers.sea.tier1.includes(textureValue)) {
+    return 1;
+  } else if (env === "space" && textureUnlockTiers.space.tier1.includes(textureValue)) {
+    return 1;
+  }
+
+  // Check if it's in tier 2
+  if (env === "sea" && textureUnlockTiers.sea.tier2.includes(textureValue)) {
+    return 2;
+  } else if (env === "space" && textureUnlockTiers.space.tier2.includes(textureValue)) {
+    return 2;
+  }
+
+  return null; // Not found in tiers
+});
+const unlockedMessage = computed(() => {
+  if (unlockTier.value === 1) {
+    return "Unlocks after completing all levels once";
+  } else if (unlockTier.value === 2) {
+    return "Unlocks after completing all levels twice";
+  }
+  return null;
+});
 
 // Open the dialog
 const openDialog = () => {
@@ -61,8 +100,10 @@ const nextTexture = () => {
 
 // Select the current texture
 const selectTexture = () => {
-  gameStore.setTextureChoice(currentTexture.value.value as TextureType);
-  closeDialog();
+  if (isUnlocked.value) {
+    gameStore.setTextureChoice(currentTexture.value.value as TextureType);
+    closeDialog();
+  }
 };
 </script>
 
@@ -106,17 +147,42 @@ const selectTexture = () => {
         <div class="flex-1 bg-gray-800 rounded-lg p-4 flex flex-col">
           <!-- Image preview container -->
           <div class="bg-black rounded flex items-center justify-center relative h-60">
-            <img :src="currentTexture.url" class="max-h-full max-w-full object-contain" />
+            <img
+              :src="currentTexture.url"
+              class="max-h-full max-w-full object-contain"
+              :class="{ 'opacity-60': !isUnlocked }"
+            />
+
+            <!-- Lock overlay for locked textures -->
+            <div v-if="!isUnlocked" class="absolute inset-0 flex items-center justify-center">
+              <div class="bg-black bg-opacity-50 p-3 rounded-full">
+                <Lock class="h-12 w-12 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Unlock message for locked textures -->
+          <div
+            v-if="!isUnlocked && unlockTier"
+            class="text-center mt-3 mb-1 text-amber-400 text-sm"
+          >
+            {{ unlockedMessage }}
           </div>
 
           <!-- Buttons -->
           <div class="flex justify-center mt-4">
             <button
               @click="selectTexture"
-              class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 focus:outline-none"
-              :class="{ 'bg-green-600 hover:bg-green-700': isSelected }"
+              class="px-4 py-2 rounded text-white focus:outline-none"
+              :class="{
+                'bg-green-600 hover:bg-green-700': isSelected,
+                'bg-blue-600 hover:bg-blue-700': !isSelected && isUnlocked,
+                'bg-gray-600 cursor-not-allowed': !isUnlocked
+              }"
             >
-              {{ isSelected ? "Selected" : "Select" }}
+              <span v-if="isSelected">Selected</span>
+              <span v-else-if="isUnlocked">Select</span>
+              <span v-else>Locked</span>
             </button>
           </div>
         </div>
