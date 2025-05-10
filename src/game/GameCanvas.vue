@@ -32,9 +32,11 @@ import type { LevelConfig } from "../lib/levelConfig";
 import { Platform } from "./Platform";
 import { Rocket } from "./Rocket";
 import {
-  getCrashParticles,
+  getCrashParticlesAndFragments,
   registerCollisionHandlers,
-  registerLandingTarget
+  registerLandingTarget,
+  resetRocketVisibility,
+  updateCrashParticlesAndFragments
 } from "./collisionHandler";
 import inputHandler from "./inputHandler";
 import {
@@ -463,9 +465,11 @@ const initializeGameScene = async () => {
         );
 
         // Add crash particles to the scene
-        const crashParticles = getCrashParticles();
-        if (crashParticles) {
-          sceneManager.scene.add(crashParticles.getMesh());
+        const crashEffectMeshes = getCrashParticlesAndFragments();
+        if (sceneManager) {
+          crashEffectMeshes.forEach((mesh) => {
+            sceneManager?.scene.add(mesh);
+          });
         }
       } else if (gameStore.environment === "sea" && platform) {
         cleanupCollisionHandlers = registerCollisionHandlers(
@@ -484,9 +488,11 @@ const initializeGameScene = async () => {
         );
 
         // Add crash particles to the scene
-        const crashParticles = getCrashParticles();
-        if (crashParticles) {
-          sceneManager.scene.add(crashParticles.getMesh());
+        const crashEffectMeshes = getCrashParticlesAndFragments();
+        if (sceneManager) {
+          crashEffectMeshes.forEach((mesh) => {
+            sceneManager?.scene.add(mesh);
+          });
         }
       }
     }
@@ -591,9 +597,8 @@ const initializeGameScene = async () => {
         }
 
         // Update crash particles if they exist
-        const crashParticles = getCrashParticles();
-        if (crashParticles) {
-          crashParticles.update(clampedDeltaTime);
+        if (sceneManager) {
+          updateCrashParticlesAndFragments(clampedDeltaTime, sceneManager.camera);
         }
 
         // Update input handler for next frame
@@ -665,6 +670,14 @@ const initializeGameScene = async () => {
         // Re-enable camera controls when resetting
         if (sceneManager) {
           sceneManager.controls.enabled = true;
+        }
+
+        // Add crash effect meshes to the scene
+        const crashEffectMeshes = getCrashParticlesAndFragments();
+        if (sceneManager) {
+          crashEffectMeshes.forEach((mesh) => {
+            sceneManager?.scene.add(mesh);
+          });
         }
 
         return;
@@ -1009,6 +1022,7 @@ watch(
 
         // Set reset flag to true to trigger rocket recreation with new model
         gameStore.setResetRocketFlag(true);
+        resetRocketVisibility(rocket.getBody());
       } catch (error) {
         handleAssetError(
           "Failed to load rocket model",
@@ -1057,6 +1071,9 @@ watch(
           newRocketBody.angularVelocity.copy(angularVelocity);
           newRocketBody.type = bodyType;
 
+          // Make sure the rocket is visible (in case we reset after a crash)
+          resetRocketVisibility(newRocketBody);
+
           // Reestablish collision handlers for the new rocket
           if (platform && cleanupCollisionHandlers) {
             cleanupCollisionHandlers();
@@ -1076,9 +1093,11 @@ watch(
             );
 
             // Add crash particles to the scene
-            const crashParticles = getCrashParticles();
-            if (crashParticles) {
-              sceneManager.scene.add(crashParticles.getMesh());
+            const crashEffectMeshes = getCrashParticlesAndFragments();
+            if (sceneManager) {
+              crashEffectMeshes.forEach((mesh) => {
+                sceneManager?.scene.add(mesh);
+              });
             }
           }
 
@@ -1146,6 +1165,9 @@ watch(
       rocketBody.velocity.set(0, 0, 0);
       rocketBody.angularVelocity.set(0, 0, 0);
       rocketBody.type = CANNON.Body.STATIC;
+
+      // Make rocket visible again if it was hidden during crash
+      resetRocketVisibility(rocketBody);
     }
 
     // If transitioning to flying state, reset the camera
@@ -1215,9 +1237,11 @@ watch(
           );
 
           // Add crash particles to the scene
-          const crashParticles = getCrashParticles();
-          if (crashParticles && sceneManager) {
-            sceneManager.scene.add(crashParticles.getMesh());
+          const crashEffectMeshes = getCrashParticlesAndFragments();
+          if (sceneManager) {
+            crashEffectMeshes.forEach((mesh) => {
+              sceneManager?.scene.add(mesh);
+            });
           }
         }
       } else if (gameStore.environment === "sea" && platform) {
@@ -1264,9 +1288,11 @@ watch(
           );
 
           // Add crash particles to the scene
-          const crashParticles = getCrashParticles();
-          if (crashParticles && sceneManager) {
-            sceneManager.scene.add(crashParticles.getMesh());
+          const crashEffectMeshes = getCrashParticlesAndFragments();
+          if (sceneManager) {
+            crashEffectMeshes.forEach((mesh) => {
+              sceneManager?.scene.add(mesh);
+            });
           }
         }
       }
