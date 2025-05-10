@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
-import { useGameStore } from "../stores/gameStore";
 import type { Environment } from "../types/storeTypes";
+
+import { useGameStore } from "../stores/gameStore";
 
 const gameStore = useGameStore();
 
@@ -88,6 +89,7 @@ const generateStars = () => {
 
 onMounted(() => {
   generateStars();
+  // gameStore.showGameCanvas = true;
 });
 
 onUnmounted(() => {

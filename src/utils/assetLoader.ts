@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-import { seaTexturesOptions, spaceTexturesOptions } from "../lib/config";
+import { seaTexturesOptions, spaceTexturesOptions } from "../lib/textureConfig";
 import { handleAssetError } from "./errorHandler";
 
 // Types of assets that can be loaded
@@ -194,7 +194,7 @@ export class AssetLoader {
 
   // Load an audio file and store it in the audio map
   private loadAudio(url: string, key: string): Promise<LoadedAsset> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       // Ensure audio context is initialized
       if (!this.audioContext) {
         this.initAudioContext();
@@ -207,34 +207,52 @@ export class AssetLoader {
         }
       }
 
-      fetch(url)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.arrayBuffer();
-        })
-        .then((arrayBuffer) => {
-          if (!this.audioContext) {
-            throw new Error("Audio context not available");
-          }
-          return this.audioContext.decodeAudioData(arrayBuffer);
-        })
-        .then((audioBuffer) => {
-          this.audio.set(key, audioBuffer);
-          resolve({
-            key,
-            type: AssetType.AUDIO,
-            data: audioBuffer
-          });
-        })
-        .catch((error) => {
-          handleAssetError(
-            `Failed to load audio: ${url}`,
-            error instanceof Error ? error : new Error(String(error))
-          );
-          reject(error);
+      try {
+        // Fetch the audio file
+        const audioResponse = await fetch(url);
+        const arrayBuffer = await audioResponse.arrayBuffer();
+
+        // Decode the audio file
+        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        this.audio.set(key, audioBuffer);
+        resolve({
+          key,
+          type: AssetType.AUDIO,
+          data: audioBuffer
         });
+      } catch (error) {
+        handleAssetError(
+          `Failed to load audio: ${url}`,
+          error instanceof Error ? error : new Error(String(error))
+        );
+        reject(error);
+      }
+
+      // fetch(url)
+      //   .then((response) => {
+
+      //   })
+      //   .then((arrayBuffer) => {
+      //     if (!this.audioContext) {
+      //       throw new Error("Audio context not available");
+      //     }
+      //     return this.audioContext.decodeAudioData(arrayBuffer);
+      //   })
+      //   .then((audioBuffer) => {
+      //     this.audio.set(key, audioBuffer);
+      //     resolve({
+      //       key,
+      //       type: AssetType.AUDIO,
+      //       data: audioBuffer
+      //     });
+      //   })
+      //   .catch((error) => {
+      //     handleAssetError(
+      //       `Failed to load audio: ${url}`,
+      //       error instanceof Error ? error : new Error(String(error))
+      //     );
+      //     reject(error);
+      //   });
     });
   }
 
@@ -447,7 +465,6 @@ export class AssetLoader {
   async loadSpacePlatformTextures(): Promise<Map<string, THREE.Texture>> {
     try {
       // Load all platform textures
-
       const platformTextures = await Promise.all(
         spaceTexturesOptions.map((texture) => this.textureLoader.loadAsync(texture.url))
       );
@@ -474,14 +491,10 @@ export class AssetLoader {
         seaTexturesOptions.map((texture) => this.textureLoader.loadAsync(texture.url))
       );
 
+      // Store textures in the map with their corresponding keys
       seaTexturesOptions.forEach((texture, index) => {
         this.textures.set(texture.value, boatTextures[index]);
       });
-      // Store textures in the map with their corresponding keys
-      // this.textures.set("vintage", boatTextures[0]);
-      // this.textures.set("boat_1", boatTextures[1]);
-      // this.textures.set("boat_2", boatTextures[2]);
-      // this.textures.set("boat_3", boatTextures[3]);
 
       return this.textures;
     } catch (error) {
