@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { Eye } from "lucide-vue-next";
+import { storeToRefs } from "pinia";
 import { ref } from "vue";
 
-import type { SceneManager } from "../../game/sceneManager";
+import { useSceneStore } from "../../stores/sceneStore";
 
-const props = defineProps<{
-  sceneManager: SceneManager;
-}>();
+// import type { SceneManager } from "../../game/sceneManager";
+
+// const props = defineProps<{
+//   sceneManager: SceneManager;
+// }>();
+
+const sceneStore = useSceneStore();
+const { sceneManager } = storeToRefs(sceneStore);
 
 // Add zoom control state and handler
 const zoomValue = ref(80); // Default zoom value
@@ -20,14 +26,14 @@ const handleZoomChange = (event: Event) => {
   zoomValue.value = newZoom;
 
   // Update camera position with mapped zoom
-  if (props.sceneManager?.camera) {
-    const direction = props.sceneManager.camera.position.clone().normalize();
+  if (sceneManager.value?.camera) {
+    const direction = sceneManager.value.camera.position.clone().normalize();
     // Map zoom value (MIN_ZOOM to MAX_ZOOM) to distance (maxDistance to minDistance)
     const distance =
-      props.sceneManager.controls.maxDistance -
+      sceneManager.value.controls.maxDistance -
       ((newZoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)) *
-        (props.sceneManager.controls.maxDistance - props.sceneManager.controls.minDistance);
-    props.sceneManager.camera.position.copy(direction.multiplyScalar(distance));
+        (sceneManager.value.controls.maxDistance - sceneManager.value.controls.minDistance);
+    sceneManager.value.camera.position.copy(direction.multiplyScalar(distance));
   }
 };
 
@@ -36,9 +42,10 @@ const updateZoomFromCamera = (cameraDistance: number) => {
   // Convert camera distance back to slider value
   // Since MIN_ZOOM maps to MAX_DISTANCE and MAX_ZOOM maps to MIN_DISTANCE
   // we need to invert the relationship
+  if (!sceneManager.value) return;
   const calculatedZoom = Math.round(
-    ((props.sceneManager.controls.maxDistance - cameraDistance) /
-      (props.sceneManager.controls.maxDistance - props.sceneManager.controls.minDistance)) *
+    ((sceneManager.value.controls.maxDistance - cameraDistance) /
+      (sceneManager.value.controls.maxDistance - sceneManager.value.controls.minDistance)) *
       (MAX_ZOOM - MIN_ZOOM) +
       MIN_ZOOM
   );
