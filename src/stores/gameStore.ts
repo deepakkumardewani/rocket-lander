@@ -7,6 +7,7 @@ import type {
   GameStateValues,
   LandingMetrics,
   RocketModel,
+  RocketUnlockNotification,
   TextureType,
   TextureUnlockNotification,
   TextureUnlockTiers,
@@ -59,11 +60,30 @@ export const useGameStore = defineStore("game", () => {
   const completedSeaLevels = ref<number>(0);
   const completedSpaceLevels = ref<number>(0);
 
+  // Rocket unlocking
+  const unlockedRockets = ref<string[]>(["classic"]);
+  const achievements = ref({
+    perfectLandings: 0,
+    highFuelLandings: 0,
+    lowVelocityLandings: 0,
+    highScores: [] as number[],
+    totalLandings: 0,
+    completedAllLevels: false,
+    lowVelocityInSpaceLevel3: false,
+    highFuelInSpaceLevel3: false
+  });
+
   // Notification for unlocked textures
   const textureUnlockNotification = ref<TextureUnlockNotification>({
     show: false,
     environment: "",
     textures: []
+  });
+
+  // Notification for unlocked rockets
+  const rocketUnlockNotification = ref<RocketUnlockNotification>({
+    show: false,
+    rockets: []
   });
 
   // Getters (computed values)
@@ -78,11 +98,28 @@ export const useGameStore = defineStore("game", () => {
   async function initUserData(): Promise<void> {
     try {
       const userProgress = await indexedDBService.getUserProgress();
-      console.log("userProgress", userProgress);
       unlockedTextures.value.sea = userProgress.unlockedSeaTextures as TextureType[];
       unlockedTextures.value.space = userProgress.unlockedSpaceTextures as TextureType[];
       completedSeaLevels.value = userProgress.completedSeaLevels;
       completedSpaceLevels.value = userProgress.completedSpaceLevels;
+
+      // Initialize rocket unlocks and achievements
+      if (userProgress.unlockedRockets) {
+        unlockedRockets.value = userProgress.unlockedRockets;
+      }
+
+      if (userProgress.achievements) {
+        achievements.value = {
+          perfectLandings: userProgress.achievements.perfectLandings || 0,
+          highFuelLandings: userProgress.achievements.highFuelLandings || 0,
+          lowVelocityLandings: userProgress.achievements.lowVelocityLandings || 0,
+          highScores: userProgress.achievements.highScores || [],
+          totalLandings: userProgress.achievements.totalLandings || 0,
+          completedAllLevels: userProgress.achievements.completedAllLevels || false,
+          lowVelocityInSpaceLevel3: userProgress.achievements.lowVelocityInSpaceLevel3 || false,
+          highFuelInSpaceLevel3: userProgress.achievements.highFuelInSpaceLevel3 || false
+        };
+      }
 
       // Ensure the current texture choice is an unlocked one
       if (!isTextureUnlocked(textureChoice.value, environment.value)) {
@@ -91,6 +128,18 @@ export const useGameStore = defineStore("game", () => {
           textureChoice.value = unlockedTextures.value.sea[0];
         } else if (environment.value === "space" && unlockedTextures.value.space.length > 0) {
           textureChoice.value = unlockedTextures.value.space[0];
+        }
+      }
+
+      // Ensure the current rocket model is an unlocked one
+      if (!isRocketUnlocked(rocketModel.value.id)) {
+        // Set to the first unlocked rocket
+        if (unlockedRockets.value.length > 0) {
+          const defaultRocket = rocketModels.find((model) => model.id === unlockedRockets.value[0]);
+          if (defaultRocket) {
+            rocketModel.value = defaultRocket;
+            rocketModelUrl.value = defaultRocket.url;
+          }
         }
       }
     } catch (error) {
@@ -106,14 +155,28 @@ export const useGameStore = defineStore("game", () => {
       const userId = localStorage.getItem("rocketLanderUserId");
       if (!userId) return;
 
-      console.log("completedSeaLevels.value", completedSeaLevels.value);
+      // Create a clean serializable copy of the data
+      const serializedHighScores = [...achievements.value.highScores];
 
       await indexedDBService.saveUserProgress({
         userId,
-        unlockedSeaTextures: unlockedTextures.value.sea.map((texture) => texture as string),
-        unlockedSpaceTextures: unlockedTextures.value.space.map((texture) => texture as string),
+        unlockedSeaTextures: [...unlockedTextures.value.sea].map((texture) => texture as string),
+        unlockedSpaceTextures: [...unlockedTextures.value.space].map(
+          (texture) => texture as string
+        ),
         completedSeaLevels: completedSeaLevels.value,
-        completedSpaceLevels: completedSpaceLevels.value
+        completedSpaceLevels: completedSpaceLevels.value,
+        unlockedRockets: [...unlockedRockets.value],
+        achievements: {
+          perfectLandings: achievements.value.perfectLandings,
+          highFuelLandings: achievements.value.highFuelLandings,
+          lowVelocityLandings: achievements.value.lowVelocityLandings,
+          highScores: serializedHighScores,
+          totalLandings: achievements.value.totalLandings,
+          completedAllLevels: achievements.value.completedAllLevels,
+          lowVelocityInSpaceLevel3: achievements.value.lowVelocityInSpaceLevel3,
+          highFuelInSpaceLevel3: achievements.value.highFuelInSpaceLevel3
+        }
       });
     } catch (error) {
       console.error("Failed to save user progress:", error);
@@ -133,6 +196,15 @@ export const useGameStore = defineStore("game", () => {
       return unlockedTextures.value.space.includes(texture);
     }
     return false;
+  }
+
+  /**
+   * Checks if a rocket is unlocked
+   * @param rocketId - The rocket ID to check
+   * @returns Whether the rocket is unlocked
+   */
+  function isRocketUnlocked(rocketId: string): boolean {
+    return unlockedRockets.value.includes(rocketId);
   }
 
   /**
@@ -171,9 +243,6 @@ export const useGameStore = defineStore("game", () => {
 
     // Check for space texture unlocks
     if (environment.value === "space") {
-      console.log("completedSpaceLevels.value", completedSpaceLevels.value);
-      console.log("totalLevels.value", totalLevels.value);
-
       // Check for tier 1 unlocks (after completing all levels once)
       if (completedSpaceLevels.value === totalLevels.value) {
         newlyUnlockedTextures = textureUnlockTiers.space.tier1.filter(
@@ -213,10 +282,147 @@ export const useGameStore = defineStore("game", () => {
   }
 
   /**
+   * Check for rocket unlocks based on achievements
+   * @param landingMetrics - Metrics from the landing
+   */
+  function checkForRocketUnlocks(landingMetrics?: LandingMetrics): void {
+    let newlyUnlockedRockets: string[] = [];
+
+    console.log(landingMetrics);
+
+    // Update achievement stats if landing metrics provided
+    if (landingMetrics) {
+      // Increment total landings
+      achievements.value.totalLandings++;
+
+      // Check for perfect landing (position.x close to 1)
+      if (Math.abs(landingMetrics.position.x) < 1) {
+        achievements.value.perfectLandings++;
+      }
+
+      // Check for high fuel landing
+      if (fuel.value >= 50) {
+        achievements.value.highFuelLandings++;
+      }
+
+      // Check for low velocity landing
+      if (Math.abs(landingMetrics.velocity.y) < 1.0) {
+        achievements.value.lowVelocityLandings++;
+      }
+
+      // Track specific achievements for level 3 in space
+      if (
+        environment.value === "space" &&
+        currentLevel.value === 3 &&
+        gameState.value === "landed"
+      ) {
+        // Track landing with velocity under 1.5 m/s in space level 3 (sci-fi requirement)
+        if (Math.abs(landingMetrics.velocity.y) < 1.5) {
+          achievements.value.lowVelocityInSpaceLevel3 = true;
+        }
+
+        // Track landing with over 30% fuel in space level 3 (falcon_heavy requirement)
+        if (fuel.value > 30) {
+          achievements.value.highFuelInSpaceLevel3 = true;
+        }
+      }
+
+      // Check for vintage rocket unlock
+      if (
+        !unlockedRockets.value.includes("vintage") &&
+        completedSeaLevels.value >= 3 &&
+        achievements.value.highFuelLandings > 0 &&
+        achievements.value.highScores.some((score) => score > 150)
+      ) {
+        newlyUnlockedRockets.push("vintage");
+      }
+
+      // Update sci-fi rocket unlock logic to include specific level 3 requirement
+      if (
+        !unlockedRockets.value.includes("sci_fi") &&
+        completedSpaceLevels.value >= totalLevels.value &&
+        achievements.value.perfectLandings > 0 &&
+        achievements.value.lowVelocityInSpaceLevel3 // Must land with velocity under 1.5 m/s at third level in space
+      ) {
+        newlyUnlockedRockets.push("sci_fi");
+      }
+
+      // Check for grasshopper unlock
+      if (
+        !unlockedRockets.value.includes("grasshopper") &&
+        achievements.value.completedAllLevels &&
+        achievements.value.lowVelocityLandings >= 3 &&
+        fuel.value >= 70
+      ) {
+        newlyUnlockedRockets.push("grasshopper");
+      }
+
+      // Check for starship unlock
+      if (
+        !unlockedRockets.value.includes("starship") &&
+        completedSeaLevels.value >= totalLevels.value * 2 &&
+        completedSpaceLevels.value >= totalLevels.value * 2 &&
+        achievements.value.highScores.filter((score) => score > 200).length >= 3 &&
+        achievements.value.totalLandings >= 10
+      ) {
+        newlyUnlockedRockets.push("starship");
+      }
+
+      // Update falcon heavy unlock logic to include specific level 3 fuel requirement
+      if (
+        !unlockedRockets.value.includes("falcon_heavy") &&
+        achievements.value.perfectLandings >= 5 &&
+        achievements.value.highFuelLandings >= 1 &&
+        achievements.value.highFuelInSpaceLevel3 && // Must land with over 30% fuel in level 3
+        unlockedRockets.value.includes("vintage") &&
+        unlockedRockets.value.includes("sci_fi") &&
+        unlockedRockets.value.includes("grasshopper") &&
+        unlockedRockets.value.includes("starship")
+      ) {
+        newlyUnlockedRockets.push("falcon_heavy");
+      }
+
+      // Add high score if applicable
+      if (score.value > 150 && !achievements.value.highScores.includes(score.value)) {
+        achievements.value.highScores.push(score.value);
+      }
+    }
+
+    // Check if all levels completed
+    if (
+      completedSeaLevels.value >= totalLevels.value &&
+      completedSpaceLevels.value >= totalLevels.value
+    ) {
+      achievements.value.completedAllLevels = true;
+    }
+
+    // Add newly unlocked rockets to the unlocked list
+    if (newlyUnlockedRockets.length > 0) {
+      unlockedRockets.value.push(...newlyUnlockedRockets);
+
+      // Show notification
+      rocketUnlockNotification.value = {
+        show: true,
+        rockets: newlyUnlockedRockets
+      };
+    }
+
+    // Save progress to IndexedDB after any achievement update
+    saveUserProgress();
+  }
+
+  /**
    * Dismiss the texture unlock notification
    */
   function dismissUnlockNotification(): void {
     textureUnlockNotification.value.show = false;
+  }
+
+  /**
+   * Dismiss the rocket unlock notification
+   */
+  function dismissRocketUnlockNotification(): void {
+    rocketUnlockNotification.value.show = false;
   }
 
   /**
@@ -264,6 +470,12 @@ export const useGameStore = defineStore("game", () => {
     // Calculate the total score
     score.value = Math.round(positionPrecision + fuelBonus + velocityBonus);
     landingMetrics.value = metrics;
+
+    // Check for rocket unlocks after successful landing
+    if (gameState.value === "landed") {
+      checkForRocketUnlocks(metrics);
+    }
+
     return score.value;
   }
 
@@ -417,9 +629,12 @@ export const useGameStore = defineStore("game", () => {
   }
 
   function setRocketModel(model: RocketModel): void {
-    rocketModel.value = model;
-    // Set the reset flag to true to trigger rocket model update
-    shouldResetRocket.value = true;
+    if (isRocketUnlocked(model.id)) {
+      rocketModel.value = model;
+      rocketModelUrl.value = model.url;
+      // Set the reset flag to true to trigger rocket model update
+      shouldResetRocket.value = true;
+    }
   }
 
   // Initialize user data from IndexedDB
@@ -447,6 +662,9 @@ export const useGameStore = defineStore("game", () => {
     textureUnlockNotification,
     completedSeaLevels,
     completedSpaceLevels,
+    unlockedRockets,
+    achievements,
+    rocketUnlockNotification,
 
     // Getters
     hasFuel,
@@ -466,9 +684,12 @@ export const useGameStore = defineStore("game", () => {
     setResetRocketFlag,
     setRocketModel,
     isTextureUnlocked,
+    isRocketUnlocked,
     dismissUnlockNotification,
+    dismissRocketUnlockNotification,
     saveUserProgress,
     initUserData,
-    checkForTextureUnlocks
+    checkForTextureUnlocks,
+    checkForRocketUnlocks
   };
 });
