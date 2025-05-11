@@ -3,6 +3,10 @@ import * as THREE from "three";
 import type { RocketModelConfig } from "../types/rocketTypes";
 import type { RocketModel } from "../types/storeTypes";
 
+const orange = 0xdd5500;
+const yellowOrange = 0xff9900;
+const white = "#fffff0";
+
 export const rocketModels: RocketModel[] = [
   {
     id: "classic",
@@ -13,7 +17,7 @@ export const rocketModels: RocketModel[] = [
     cameraPosition: { x: 0, y: 0, z: -40 }
   },
   {
-    id: "old",
+    id: "vintage",
     name: "Vintage Rocket",
     url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086362/rocket-lander/models/old_rocket_jmzeww.glb",
     position: { x: 0, y: 0.007, z: 0 },
@@ -27,72 +31,12 @@ export const rocketModels: RocketModel[] = [
       {
         type: "DirectionalLight",
         position: { x: 100, y: 10, z: 100 },
-        color: "#fffff0",
+        color: white,
         intensity: 0.8
       },
       {
         type: "PointLight",
-        color: "#ffffff",
-        position: { x: 200, y: -200, z: 100 },
-        intensity: 1
-      }
-    ]
-  },
-  {
-    id: "starship",
-    name: "Starship",
-    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086350/rocket-lander/models/starship_-_space_x_yqf9iv.glb",
-    position: { x: 0, y: 0.01, z: 0 },
-    scale: { x: 0.8, y: 0.8, z: 0.8 },
-    cameraPosition: { x: 0, y: 0, z: 0 },
-    lights: [
-      {
-        type: "AmbientLight",
-        color: "white"
-      },
-      {
-        type: "DirectionalLight",
-        position: { x: 100, y: 10, z: 100 },
-        color: "#fffff0",
-        intensity: 0.8
-      },
-      {
-        type: "PointLight",
-        color: "#ffffff",
-        position: { x: 200, y: -200, z: 100 },
-        intensity: 1
-      }
-    ]
-  },
-  {
-    id: "grasshopper",
-    name: "Grasshopper",
-    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086347/rocket-lander/models/spacex_grasshopper_uurywz.glb",
-    position: { x: 0, y: 0, z: 0 },
-    scale: { x: 0.8, y: 0.8, z: 0.8 },
-    cameraPosition: { x: 0, y: 0, z: 0 }
-  },
-  {
-    id: "falcon_heavy",
-    name: "Falcon Heavy",
-    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086346/rocket-lander/models/spacex_falcon_heavy.glb",
-    position: { x: 0, y: 0, z: 0 },
-    scale: { x: 1, y: 1, z: 1 },
-    cameraPosition: { x: 0, y: 0, z: 400 },
-    lights: [
-      {
-        type: "AmbientLight",
-        color: "white"
-      },
-      {
-        type: "DirectionalLight",
-        position: { x: 100, y: 10, z: 100 },
-        color: "#fffff0",
-        intensity: 0.8
-      },
-      {
-        type: "PointLight",
-        color: "#ffffff",
+        color: white,
         position: { x: 200, y: -200, z: 100 },
         intensity: 1
       }
@@ -113,8 +57,68 @@ export const rocketModels: RocketModel[] = [
       {
         type: "DirectionalLight",
         position: { x: 100, y: 10, z: 100 },
-        color: "#fffff0",
+        color: white,
         intensity: 0.8
+      }
+    ]
+  },
+  {
+    id: "grasshopper",
+    name: "Grasshopper",
+    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086347/rocket-lander/models/spacex_grasshopper_uurywz.glb",
+    position: { x: 0, y: 0, z: 0 },
+    scale: { x: 0.8, y: 0.8, z: 0.8 },
+    cameraPosition: { x: 0, y: 0, z: 0 }
+  },
+  {
+    id: "starship",
+    name: "Starship",
+    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086350/rocket-lander/models/starship_-_space_x_yqf9iv.glb",
+    position: { x: 0, y: 0.01, z: 0 },
+    scale: { x: 0.8, y: 0.8, z: 0.8 },
+    cameraPosition: { x: 0, y: 0, z: 0 },
+    lights: [
+      {
+        type: "AmbientLight",
+        color: "white"
+      },
+      {
+        type: "DirectionalLight",
+        position: { x: 100, y: 10, z: 100 },
+        color: white,
+        intensity: 0.8
+      },
+      {
+        type: "PointLight",
+        color: white,
+        position: { x: 200, y: -200, z: 100 },
+        intensity: 1
+      }
+    ]
+  },
+  {
+    id: "falcon_heavy",
+    name: "Falcon Heavy",
+    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086346/rocket-lander/models/spacex_falcon_heavy.glb",
+    position: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+    cameraPosition: { x: 0, y: 0, z: 400 },
+    lights: [
+      {
+        type: "AmbientLight",
+        color: "white"
+      },
+      {
+        type: "DirectionalLight",
+        position: { x: 100, y: 10, z: 100 },
+        color: white,
+        intensity: 0.8
+      },
+      {
+        type: "PointLight",
+        color: white,
+        position: { x: 200, y: -200, z: 100 },
+        intensity: 1
       }
     ]
   }
@@ -133,7 +137,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 4,
         speed: 3,
         count: 300,
-        color: 0xffa500, // Orange
+        color: orange, // Orange
         size: 0.3,
         lifetime: 0.8
       }
@@ -144,7 +148,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
       collisionOffset: 0.1 // Slightly raised collision point
     }
   },
-  old: {
+  vintage: {
     scale: 50,
     position: new THREE.Vector3(0, 25, 0),
     rotation: new THREE.Euler(0, 0, 0),
@@ -155,7 +159,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: 400,
         speed: 2.5,
         count: 400,
-        color: 0xdd5500,
+        color: orange,
         size: 0.4,
         lifetime: 0.7,
         diameter: 0.03
@@ -178,7 +182,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: 500,
         speed: 3.5,
         count: 400,
-        color: 0xdd5500,
+        color: orange,
         size: 0.45,
         lifetime: 0.9
       },
@@ -188,7 +192,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 2,
         speed: 3.5,
         count: 400,
-        color: 0xdd5500,
+        color: orange,
         size: 0.45,
         lifetime: 0.9
       },
@@ -198,7 +202,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 2,
         speed: 3.5,
         count: 400,
-        color: 0xdd5500,
+        color: orange,
         size: 0.45,
         lifetime: 0.9
       },
@@ -208,7 +212,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 2,
         speed: 3.5,
         count: 400,
-        color: 0xdd5500,
+        color: orange,
         size: 0.45,
         lifetime: 0.9
       },
@@ -218,7 +222,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 2,
         speed: 3.5,
         count: 400,
-        color: 0xdd5500,
+        color: orange,
         size: 0.45,
         lifetime: 0.9
       },
@@ -228,7 +232,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 2,
         speed: 3.5,
         count: 400,
-        color: 0xdd5500,
+        color: orange,
         size: 0.45,
         lifetime: 0.9
       }
@@ -250,7 +254,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 2,
         speed: 2.8,
         count: 400,
-        color: 0xff9900, // Yellow-orange
+        color: yellowOrange, // Yellow-orange
         size: 0.5,
         lifetime: 0.85
       }
@@ -273,7 +277,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 10,
         speed: 6,
         count: 560,
-        color: 0xffab44, // Light orange
+        color: yellowOrange, // Light orange
         size: 0.5,
         lifetime: 1.0
       },
@@ -284,7 +288,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 10,
         speed: 6,
         count: 560,
-        color: 0xffab44,
+        color: yellowOrange,
         size: 0.5,
         lifetime: 1.0,
         diameter: 1.5 // Slightly smaller diameter for boosters
@@ -296,7 +300,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 10,
         speed: 6,
         count: 560,
-        color: 0xffab44,
+        color: yellowOrange,
         size: 0.5,
         lifetime: 1.0,
         diameter: 1.5 // Slightly smaller diameter for boosters
@@ -319,7 +323,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         spread: Math.PI / 2,
         speed: 3.2,
         count: 500,
-        color: 0xffa500, // Cyan-green
+        color: yellowOrange,
         size: 0.3,
         lifetime: 0.95,
         diameter: 2.0 // Large diameter for center core
@@ -330,5 +334,49 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
       height: 1.0,
       collisionOffset: -1
     }
+  }
+};
+
+// Define rocket achievement requirements
+export const rocketAchievements = {
+  vintage: {
+    name: "Vintage Rocket",
+    requirements: [
+      "Complete 3 sea levels",
+      "Land with at least 50% fuel remaining",
+      "Score above 150 points in any level"
+    ]
+  },
+  sci_fi: {
+    name: "Sci-Fi Rocket",
+    requirements: [
+      "Complete all space levels",
+      "Land with velocity under 1.5 m/s at third level in space",
+      "Achieve perfect landing (centered on platform)"
+    ]
+  },
+  grasshopper: {
+    name: "Grasshopper",
+    requirements: [
+      "Complete both sea and space environment levels",
+      "Land with velocity under 1 m/s three times",
+      "Complete any level with 70% fuel remaining"
+    ]
+  },
+  starship: {
+    name: "Starship",
+    requirements: [
+      "Complete all sea and space levels twice",
+      "Score above 200 points three times in either sea or space",
+      "Perform 10 successful landings in either sea or space"
+    ]
+  },
+  falcon_heavy: {
+    name: "Falcon Heavy",
+    requirements: [
+      "Complete all levels with perfect landings (centered on platform)",
+      "Land with over 30% fuel in the third level in space",
+      "Unlock all other rockets first"
+    ]
   }
 };
