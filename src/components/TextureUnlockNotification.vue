@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Rocket } from "lucide-vue-next";
 import { computed, onMounted, ref, watch } from "vue";
+import ConfettiExplosion from "vue-confetti-explosion";
 
 import type { TextureType } from "../types/storeTypes";
 
@@ -119,6 +120,9 @@ const startAnimation = () => {
           Awesome!
         </button>
       </div>
+    </div>
+    <div class="fixed inset-0 -z-10 flex items-center justify-center">
+      <ConfettiExplosion />
     </div>
   </div>
 </template>

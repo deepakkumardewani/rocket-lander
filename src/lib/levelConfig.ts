@@ -9,6 +9,7 @@ export interface LevelConfig {
   levelNumber: number;
   platformWidth: number;
   platformDepth: number;
+  platformXPosition?: number;
   platformMovement?: {
     type: "oscillate" | "drift" | "tilt";
     axis?: "x" | "z";
@@ -35,6 +36,7 @@ export const spaceLevels: LevelConfig[] = [
     levelNumber: 1,
     platformWidth: 10,
     platformDepth: 5,
+    platformXPosition: 0,
     windStrength: 0,
     gravity: -9.81,
     startingFuel: 100
@@ -43,7 +45,8 @@ export const spaceLevels: LevelConfig[] = [
     levelNumber: 2,
     platformWidth: 7,
     platformDepth: 7,
-    windStrength: 1,
+    platformXPosition: -10,
+    windStrength: 2,
     gravity: -9.81,
     startingFuel: 75
   },
@@ -51,7 +54,8 @@ export const spaceLevels: LevelConfig[] = [
     levelNumber: 3,
     platformWidth: 5,
     platformDepth: 5,
-    windStrength: 1.5,
+    platformXPosition: 10,
+    windStrength: 3,
     gravity: -9.81,
     startingFuel: 50
   }
@@ -65,6 +69,7 @@ export const seaLevels: LevelConfig[] = [
     levelNumber: 1,
     platformWidth: 20,
     platformDepth: 10,
+    platformXPosition: 0,
     windStrength: 0,
     gravity: -9.81,
     startingFuel: 100,
@@ -74,7 +79,8 @@ export const seaLevels: LevelConfig[] = [
     levelNumber: 2,
     platformWidth: 15,
     platformDepth: 8,
-    windStrength: 1,
+    platformXPosition: -10,
+    windStrength: 2,
     gravity: -9.81,
     startingFuel: 75,
     waveHeight: 0.2
@@ -83,7 +89,8 @@ export const seaLevels: LevelConfig[] = [
     levelNumber: 3,
     platformWidth: 10,
     platformDepth: 5,
-    windStrength: 2,
+    platformXPosition: 10,
+    windStrength: 3,
     gravity: -9.81,
     startingFuel: 50,
     waveHeight: 0.5
