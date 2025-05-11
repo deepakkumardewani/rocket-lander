@@ -6,6 +6,17 @@ interface UserProgress {
   unlockedSpaceTextures: string[];
   completedSeaLevels: number;
   completedSpaceLevels: number;
+  unlockedRockets: string[];
+  achievements: {
+    perfectLandings: number;
+    highFuelLandings: number;
+    lowVelocityLandings: number;
+    highScores: number[];
+    totalLandings: number;
+    completedAllLevels: boolean;
+    lowVelocityInSpaceLevel3: boolean;
+    highFuelInSpaceLevel3: boolean;
+  };
 }
 
 class IndexedDBService {
@@ -66,7 +77,18 @@ class IndexedDBService {
       unlockedSeaTextures: ["vintage"],
       unlockedSpaceTextures: ["platform_1"],
       completedSeaLevels: 0,
-      completedSpaceLevels: 0
+      completedSpaceLevels: 0,
+      unlockedRockets: ["classic"],
+      achievements: {
+        perfectLandings: 0,
+        highFuelLandings: 0,
+        lowVelocityLandings: 0,
+        highScores: [],
+        totalLandings: 0,
+        completedAllLevels: false,
+        lowVelocityInSpaceLevel3: false,
+        highFuelInSpaceLevel3: false
+      }
     };
 
     await this.saveUserProgress(newUserProgress);
