@@ -2,6 +2,7 @@
 import { computed, watch } from "vue";
 
 import EnvironmentSelector from "./components/EnvironmentSelector.vue";
+import RocketUnlockNotification from "./components/RocketUnlockNotification.vue";
 import TextureUnlockNotification from "./components/TextureUnlockNotification.vue";
 import GameCanvas from "./game/GameCanvas.vue";
 
@@ -39,8 +40,9 @@ const resetToSelector = () => {
       <!-- Game Canvas -->
       <GameCanvas v-if="showGameCanvas" @game-end="resetToSelector" />
 
-      <!-- Unlock Notification -->
+      <!-- Unlock Notifications -->
       <TextureUnlockNotification />
+      <RocketUnlockNotification />
     </div>
   </div>
 </template>

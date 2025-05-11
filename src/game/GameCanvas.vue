@@ -344,6 +344,7 @@ const initializeGameScene = async () => {
       platform = new Platform({
         width: levelConfig.value?.platformWidth || 5,
         depth: levelConfig.value?.platformDepth || 5,
+        position: new THREE.Vector3(levelConfig.value?.platformXPosition || 0, 0, 0),
         texture: currentTexture
       });
       platform.addToScene(sceneManager.scene);
@@ -383,6 +384,7 @@ const initializeGameScene = async () => {
       platform = new Platform({
         width: levelConfig.value?.platformWidth || 10,
         depth: levelConfig.value?.platformDepth || 20,
+        position: new THREE.Vector3(levelConfig.value?.platformXPosition || 0, 0, 0),
         texture: currentTexture,
         color: 0x8b4513
       });
@@ -1211,6 +1213,7 @@ watch(
         platform = new Platform({
           width: levelConfig.value?.platformWidth || 5,
           depth: levelConfig.value?.platformDepth || 5,
+          position: new THREE.Vector3(levelConfig.value?.platformXPosition || 0, 0, 0),
           texture: currentTexture
         });
 
@@ -1256,6 +1259,7 @@ watch(
         platform = new Platform({
           width: levelConfig.value?.platformWidth || 10,
           depth: levelConfig.value?.platformDepth || 20,
+          position: new THREE.Vector3(levelConfig.value?.platformXPosition || 0, 0, 0),
           color: 0x8b4513,
           texture: currentTexture
         });
