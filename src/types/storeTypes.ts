@@ -76,3 +76,29 @@ export interface TextureUnlockNotification {
   environment: Environment;
   textures: TextureType[];
 }
+
+// New interfaces for rocket unlocking
+export interface RocketUnlockNotification {
+  show: boolean;
+  rockets: string[];
+}
+
+export interface RocketAchievement {
+  name: string;
+  requirements: string[];
+}
+
+export interface RocketAchievements {
+  [key: string]: RocketAchievement;
+}
+
+export interface UserAchievements {
+  perfectLandings: number;
+  highFuelLandings: number;
+  lowVelocityLandings: number;
+  highScores: number[];
+  totalLandings: number;
+  completedAllLevels: boolean;
+  lowVelocityInSpaceLevel3: boolean;
+  highFuelInSpaceLevel3: boolean;
+}
