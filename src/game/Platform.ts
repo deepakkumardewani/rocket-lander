@@ -2,6 +2,7 @@ import * as CANNON from "cannon-es";
 import * as THREE from "three";
 
 import { handleRenderingError } from "../utils/errorHandler";
+
 import { createPhysicsMaterial, world } from "./physics";
 
 /**

@@ -42,7 +42,6 @@ export class Rocket {
           this.modelConfig.position.z
         );
 
-      console.log("position", position);
       // Get the rocket model from the asset loader
       const rocketModel = assetLoader.getModel("rocket");
 
