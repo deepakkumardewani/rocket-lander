@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, X } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, CheckCircle, Lock, X } from "lucide-vue-next";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { vue3dLoader } from "vue-3d-loader";
 
-import type { RocketModel } from "../../types/storeTypes";
+import type { RocketAchievements, RocketModel } from "../../types/storeTypes";
 
 import { useGameStore } from "../../stores/gameStore";
 
 import { assetLoader } from "../../utils/assetLoader";
 
+import { rocketAchievements } from "../../lib/rocketConfig";
 import { rocketModels } from "../../lib/rocketConfig";
 
 const gameStore = useGameStore();
@@ -42,6 +43,89 @@ const isLast = computed(() => currentIndex.value === rocketModels.length - 1);
 
 // Check if current model is selected
 const isSelected = computed(() => currentModel.value.id === selectedModel.value.id);
+
+// Check if current model is unlocked
+const isUnlocked = computed(() => gameStore.isRocketUnlocked(currentModel.value.id));
+
+// Get unlock requirements for the current rocket model
+const unlockRequirements = computed(() => {
+  if (isUnlocked.value) {
+    return null; // Already unlocked
+  }
+
+  const rocketId = currentModel.value.id;
+  return (rocketAchievements as RocketAchievements)[rocketId]?.requirements || [];
+});
+
+// Check which requirements are completed for the current rocket
+const completedRequirements = computed(() => {
+  if (!unlockRequirements.value) return [];
+
+  const rocketId = currentModel.value.id;
+
+  // Use specific checker functions for each rocket type
+  switch (rocketId) {
+    case "vintage":
+      return checkVintageRequirements();
+    case "sci_fi":
+      return checkSciFiRequirements();
+    case "grasshopper":
+      return checkGrasshopperRequirements();
+    case "starship":
+      return checkStarshipRequirements();
+    case "falcon_heavy":
+      return checkFalconHeavyRequirements();
+    default:
+      return unlockRequirements.value.map(() => false);
+  }
+});
+
+// Check vintage rocket requirements
+function checkVintageRequirements() {
+  return [
+    gameStore.completedSeaLevels >= 3,
+    gameStore.achievements.highFuelLandings > 0,
+    gameStore.achievements.highScores.some((score) => score > 150)
+  ];
+}
+
+// Check sci-fi rocket requirements
+function checkSciFiRequirements() {
+  return [
+    gameStore.completedSpaceLevels >= gameStore.totalLevels,
+    gameStore.achievements.lowVelocityLandings > 0,
+    gameStore.achievements.perfectLandings > 0
+  ];
+}
+
+// Check grasshopper rocket requirements
+function checkGrasshopperRequirements() {
+  return [
+    gameStore.achievements.completedAllLevels,
+    gameStore.achievements.lowVelocityLandings >= 3,
+    gameStore.achievements.highFuelLandings > 0 && gameStore.fuel >= 70
+  ];
+}
+
+// Check starship rocket requirements
+function checkStarshipRequirements() {
+  return [
+    gameStore.completedSeaLevels >= gameStore.totalLevels * 2 &&
+      gameStore.completedSpaceLevels >= gameStore.totalLevels * 2,
+    gameStore.achievements.highScores.filter((score) => score > 200).length >= 3,
+    gameStore.achievements.totalLandings >= 10
+  ];
+}
+
+// Check falcon heavy rocket requirements
+function checkFalconHeavyRequirements() {
+  const otherRockets = ["classic", "vintage", "sci_fi", "grasshopper", "starship"];
+  return [
+    gameStore.achievements.perfectLandings >= 5,
+    gameStore.achievements.highFuelLandings > 0 && gameStore.fuel >= 80,
+    otherRockets.every((id) => gameStore.isRocketUnlocked(id))
+  ];
+}
 
 // Preload all rocket models in the background to improve user experience
 const preloadRocketModels = async () => {
@@ -105,9 +189,11 @@ const nextRocket = () => {
 
 // Select the current rocket
 const selectRocket = () => {
-  selectedModel.value = currentModel.value;
-  gameStore.setRocketModel(currentModel.value);
-  closeDialog();
+  if (isUnlocked.value) {
+    selectedModel.value = currentModel.value;
+    gameStore.setRocketModel(currentModel.value);
+    closeDialog();
+  }
 };
 
 // Open the fullscreen viewer for a model
@@ -135,36 +221,6 @@ function rotate() {
     rotation.value.y -= 0.009;
   }
 }
-
-// watch(currentModel, () => {
-//   console.log('currentModel', currentModel.value.id)
-//   switch (currentModel.value.id) {
-//     case 'classic':
-//       // position.value = { x: 0, y: 0.007, z: 0 }
-//       // scale.value = { x: 0.7, y: 0.7, z: 0.7 }
-//       break
-//     case 'old':
-//       position.value = { x: 0, y: 0.007, z: 0 }
-//       scale.value = { x: 0.5, y: 0.5, z: 0.5 }
-//       break
-//     case 'falcon_heavy':
-//       position.value = { x: 0, y: 0.007, z: 0 }
-//       scale.value = { x: 0.5, y: 0.5, z: 0.5 }
-//       break
-//     case 'starship':
-//       position.value = { x: 0, y: 0.01, z: 0 }
-//       scale.value = { x: 0.7, y: 0.7, z: 0.7 }
-//       break
-//     case 'sci-fi_rocket':
-//       position.value = { x: 0, y: 0.01, z: 0 }
-//       scale.value = { x: 0.7, y: 0.7, z: 0.7 }
-//       break
-
-//     default:
-//       position.value.y = 0
-//   }
-//   console.log('position', position.value)
-// })
 
 onMounted(() => {
   rotate();
@@ -205,10 +261,10 @@ onUnmounted(() => {
     v-if="isOpen"
     class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 h-screen w-full"
   >
-    <div class="bg-gray-900 h-[90%] rounded-lg p-5 max-w-4xl w-full">
+    <div class="bg-gray-900 h-[90%] rounded-lg p-5 max-w-4xl w-full flex flex-col">
       <div class="flex items-center mb-4">
         <div class="flex-1 flex items-center justify-center">
-          <h3 class="text-white text-lg font-semibold">
+          <h3 class="text-white text-xl font-semibold">
             {{ currentModel.name }}
           </h3>
         </div>
@@ -218,12 +274,12 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <div class="flex items-center">
+      <div class="flex items-center flex-1 overflow-hidden">
         <!-- Left navigation button -->
         <button
           @click="prevRocket"
           :disabled="isFirst"
-          class="bg-gray-800 p-2 rounded-full text-white mr-4 focus:outline-none"
+          class="bg-gray-800 p-2 rounded-full text-white mr-4 focus:outline-none shrink-0"
           :class="{
             'opacity-30 cursor-not-allowed': isFirst,
             'hover:bg-gray-700': !isFirst
@@ -233,10 +289,11 @@ onUnmounted(() => {
         </button>
 
         <!-- Rocket display -->
-        <div class="flex-1 bg-gray-800 rounded-lg p-4 h-full flex flex-col">
+        <div class="flex-1 bg-gray-800 rounded-lg p-4 h-full flex flex-col overflow-hidden">
           <!-- 3D Model preview container -->
           <div
-            class="flex-1 rounded bg-black flex items-center justify-center relative min-h-[500px]"
+            class="flex-1 rounded bg-black flex items-center justify-center relative mb-4"
+            style="min-height: 300px"
           >
             <vue3dLoader
               v-if="!isHidden"
@@ -253,21 +310,63 @@ onUnmounted(() => {
               :position="position"
               :scale="scale"
               :cameraPosition="cameraPosition"
-              :height="400"
+              :height="300"
               :width="700"
               :lights="lights"
               class="flex items-center justify-center"
+              :class="{ 'opacity-60': !isUnlocked }"
             ></vue3dLoader>
+
+            <!-- Lock overlay for locked rockets -->
+            <div v-if="!isUnlocked" class="absolute inset-0 flex items-center justify-center">
+              <div class="bg-black bg-opacity-50 p-3 rounded-full">
+                <Lock class="h-12 w-12 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Unlock requirements for locked rockets -->
+          <div v-if="!isUnlocked && unlockRequirements" class="mt-1 mb-4 text-white">
+            <div class="text-center font-semibold mb-3 text-amber-400">UNLOCK REQUIREMENTS</div>
+            <ul class="space-y-2">
+              <li
+                v-for="(requirement, index) in unlockRequirements"
+                :key="index"
+                class="flex items-center gap-3 pl-4"
+              >
+                <div v-if="completedRequirements[index]" class="text-green-500 flex-shrink-0">
+                  <CheckCircle class="h-5 w-5" />
+                </div>
+                <div
+                  v-else
+                  class="text-gray-500 flex-shrink-0 border border-gray-500 rounded-full h-5 w-5 flex items-center justify-center"
+                ></div>
+                <span
+                  :class="{
+                    'text-green-400': completedRequirements[index],
+                    'text-gray-300': !completedRequirements[index]
+                  }"
+                >
+                  {{ requirement }}
+                </span>
+              </li>
+            </ul>
           </div>
 
           <!-- Buttons -->
-          <div class="flex justify-center mt-4 space-x-4">
+          <div class="flex justify-center mt-auto space-x-4 py-2">
             <button
               @click="selectRocket"
-              class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 focus:outline-none"
-              :class="{ 'bg-green-600 hover:bg-green-700': isSelected }"
+              class="px-4 py-2 rounded text-white focus:outline-none"
+              :class="{
+                'bg-green-600 hover:bg-green-700': isSelected,
+                'bg-blue-600 hover:bg-blue-700': !isSelected && isUnlocked,
+                'bg-blue-600 opacity-50 cursor-not-allowed': !isUnlocked
+              }"
             >
-              {{ isSelected ? "Selected" : "Select" }}
+              <span v-if="isSelected">Selected</span>
+              <span v-else-if="isUnlocked">Select</span>
+              <span v-else>Select</span>
             </button>
             <button
               @click="openViewer"
@@ -282,7 +381,7 @@ onUnmounted(() => {
         <button
           @click="nextRocket"
           :disabled="isLast"
-          class="bg-gray-800 p-2 rounded-full text-white ml-4 focus:outline-none"
+          class="bg-gray-800 p-2 rounded-full text-white ml-4 focus:outline-none shrink-0"
           :class="{
             'opacity-30 cursor-not-allowed': isLast,
             'hover:bg-gray-700': !isLast
