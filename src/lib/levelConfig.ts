@@ -35,7 +35,7 @@ export const spaceLevels: LevelConfig[] = [
   {
     levelNumber: 1,
     platformWidth: 10,
-    platformDepth: 5,
+    platformDepth: 10,
     platformXPosition: 0,
     windStrength: 0,
     gravity: -9.81,

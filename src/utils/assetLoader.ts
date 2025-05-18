@@ -423,7 +423,6 @@ export class AssetLoader {
 
       // Wait for all textures to load
       this.loadedSkyboxTextures = await Promise.all(promises);
-      console.log("Skybox textures loaded successfully");
       return this.loadedSkyboxTextures;
     } catch (error) {
       handleAssetError(
@@ -453,7 +452,6 @@ export class AssetLoader {
       // Store texture in the map
       this.textures.set("star", starTexture);
 
-      console.log("Star texture loaded successfully");
       return starTexture;
     } catch (error) {
       console.error("Failed to load star texture:", error);
@@ -471,7 +469,6 @@ export class AssetLoader {
       spaceTexturesOptions.forEach((texture, index) => {
         this.textures.set(texture.value, platformTextures[index]);
       });
-      console.log("Space platform textures loaded successfully");
       return this.textures;
     } catch (error) {
       handleAssetError(

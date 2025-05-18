@@ -99,10 +99,10 @@ export const rocketModels: RocketModel[] = [
   {
     id: "falcon_heavy",
     name: "Falcon Heavy",
-    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1745086346/rocket-lander/models/spacex_falcon_heavy.glb",
+    url: "https://res.cloudinary.com/ddzuitkzt/image/upload/v1747072613/rocket-lander/models/spacex_falcon_heavy_1.glb",
     position: { x: 0, y: 0, z: 0 },
-    scale: { x: 1, y: 1, z: 1 },
-    cameraPosition: { x: 0, y: 0, z: 400 },
+    scale: { x: 0.7, y: 0.7, z: 0.7 },
+    cameraPosition: { x: 0, y: 0, z: 0 },
     lights: [
       {
         type: "AmbientLight",
@@ -125,7 +125,6 @@ export const rocketModels: RocketModel[] = [
 ];
 
 export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
-  // Specific rocket model configurations
   classic: {
     scale: 0.2,
     position: new THREE.Vector3(0, 15, 0),
@@ -251,9 +250,9 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
       {
         position: new THREE.Vector3(0, -12.5, 0),
         direction: new THREE.Vector3(0, -1, 0),
-        spread: Math.PI / 2,
+        spread: 250,
         speed: 2.8,
-        count: 400,
+        count: 500,
         color: yellowOrange, // Yellow-orange
         size: 0.5,
         lifetime: 0.85
@@ -262,28 +261,17 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
     physicsBody: {
       radius: 0.25,
       height: 1.0,
-      collisionOffset: -8 // Adjusted for grasshopper model
+      collisionOffset: -7 // Adjusted for grasshopper model
     }
   },
   falcon_heavy: {
     scale: 0.05,
-    position: new THREE.Vector3(-6, 20, 0),
-    rotation: new THREE.Euler(0, Math.PI, 0),
+    position: new THREE.Vector3(0, 30, 0),
+    rotation: new THREE.Euler(0, 0, 0),
     thrusters: [
       {
-        // Center core thruster
-        position: new THREE.Vector3(-100, -2.2, 0),
-        direction: new THREE.Vector3(0, -1, 0),
-        spread: Math.PI / 10,
-        speed: 6,
-        count: 560,
-        color: yellowOrange, // Light orange
-        size: 0.5,
-        lifetime: 1.0
-      },
-      {
         // Left booster thruster
-        position: new THREE.Vector3(-115, -2.2, 0),
+        position: new THREE.Vector3(18, -200, 0),
         direction: new THREE.Vector3(0, -1, 0),
         spread: Math.PI / 10,
         speed: 6,
@@ -294,8 +282,19 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
         diameter: 1.5 // Slightly smaller diameter for boosters
       },
       {
+        // Center core thruster
+        position: new THREE.Vector3(0, -200, 0),
+        direction: new THREE.Vector3(0, -1, 0),
+        spread: Math.PI / 10,
+        speed: 6,
+        count: 560,
+        color: yellowOrange, // Light orange
+        size: 0.5,
+        lifetime: 1.0
+      },
+      {
         // Right booster thruster
-        position: new THREE.Vector3(-135, -2.2, 0),
+        position: new THREE.Vector3(-18, -200, 0),
         direction: new THREE.Vector3(0, -1, 0),
         spread: Math.PI / 10,
         speed: 6,
@@ -309,7 +308,7 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
     physicsBody: {
       radius: 0.025,
       height: 0.1,
-      collisionOffset: 0.025 // Adjusted for falcon heavy model
+      collisionOffset: -10 // Adjusted for falcon heavy model
     }
   },
   sci_fi: {
@@ -320,11 +319,11 @@ export const ROCKET_MODELS_CONFIG: Record<string, RocketModelConfig> = {
       {
         position: new THREE.Vector3(0, -2.2, 0),
         direction: new THREE.Vector3(0, -1, 0),
-        spread: Math.PI / 2,
+        spread: 250,
         speed: 3.2,
-        count: 500,
+        count: 800,
         color: yellowOrange,
-        size: 0.3,
+        size: 0.5,
         lifetime: 0.95,
         diameter: 2.0 // Large diameter for center core
       }
