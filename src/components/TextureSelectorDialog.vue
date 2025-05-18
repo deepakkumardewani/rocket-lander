@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, Lock, X } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, Layers, Lock, X } from "lucide-vue-next";
 import { computed, ref } from "vue";
 
-import type { TextureType } from "../../types/storeTypes";
+import type { TextureType } from "../types/storeTypes";
 
-import { textureUnlockTiers, useGameStore } from "../../stores/gameStore";
+import { textureUnlockTiers, useGameStore } from "../stores/gameStore";
 
-import { seaTexturesOptions, spaceTexturesOptions } from "../../lib/textureConfig";
+import { seaTexturesOptions, spaceTexturesOptions } from "../lib/textureConfig";
 
 const gameStore = useGameStore();
 
@@ -109,7 +109,9 @@ const selectTexture = () => {
 
 <template>
   <!-- Trigger button to open dialog -->
-  <div class="texture-selector-button" @click="openDialog">Change Texture</div>
+  <div class="texture-selector-button" @click="openDialog" title="Select landing platform">
+    <Layers class="h-6 w-6" />
+  </div>
 
   <!-- Texture selector dialog -->
   <div

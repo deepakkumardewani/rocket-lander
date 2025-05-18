@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, CheckCircle, Lock, X } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, CheckCircle, Lock, Rocket, X } from "lucide-vue-next";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { vue3dLoader } from "vue-3d-loader";
 
-import type { RocketAchievements, RocketModel } from "../../types/storeTypes";
+import type { RocketAchievements, RocketModel } from "../types/storeTypes";
 
-import { useGameStore } from "../../stores/gameStore";
+import { useGameStore } from "../stores/gameStore";
 
-import { assetLoader } from "../../utils/assetLoader";
+import { assetLoader } from "../utils/assetLoader";
 
-import { rocketAchievements } from "../../lib/rocketConfig";
-import { rocketModels } from "../../lib/rocketConfig";
+import { rocketAchievements } from "../lib/rocketConfig";
+import { rocketModels } from "../lib/rocketConfig";
 
 const gameStore = useGameStore();
 
@@ -210,16 +210,11 @@ const closeViewer = () => {
 
 // Handle model load event
 function onLoad() {
-  // console.log('onLoad')
   // isModelLoading.value = false
 }
 function rotate() {
   rotationAnimationId.value = requestAnimationFrame(rotate);
-  if (currentModel.value.id === "falcon_heavy") {
-    rotation.value.y = 0;
-  } else {
-    rotation.value.y -= 0.009;
-  }
+  rotation.value.y -= 0.009;
 }
 
 onMounted(() => {
@@ -243,18 +238,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Trigger button to open dialog -->
-  <!-- Back to Selection Button -->
-  <div class="rocket-selector-button" @click="openDialog">Change Rocket</div>
-  <!-- <div class="rocket-selector bg-black bg-opacity-50 p-3 rounded-lg backdrop-blur-sm">
-    <button
-      @click="openDialog"
-      class="w-full bg-black bg-opacity-50 text-white p-2 rounded border border-white border-opacity-20 focus:outline-none flex items-center justify-between"
-    >
-      <span>{{ selectedModel.name }}</span>
-      <span>▼</span>
-    </button>
-  </div> -->
+  <div class="rocket-selector-button" @click="openDialog" title="Choose your rocket">
+    <Rocket class="h-6 w-6" />
+  </div>
 
   <!-- Rocket selector dialog -->
   <div
