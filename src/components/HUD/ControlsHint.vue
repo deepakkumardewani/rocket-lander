@@ -7,16 +7,15 @@ import { useGameStore } from "../../stores/gameStore";
 const gameStore = useGameStore();
 const { gameState } = storeToRefs(gameStore);
 
-// Determine if game is in active play state
-const isPlaying = computed(() => {
-  return gameState.value === "flying" || gameState.value === "pre-launch";
+const isWaiting = computed(() => {
+  return gameState.value === "waiting";
 });
 </script>
 
 <template>
   <div
-    v-if="isPlaying"
-    class="bg-[rgba(23,23,23,0.7)] backdrop-blur-md border border-white/15 rounded-xl p-3 flex gap-6 shadow-xl transition-all duration-300 ease-in-out hover:bg-[rgba(30,30,30,0.8)] hover:border-white/25"
+    v-if="isWaiting"
+    class="fixed bottom-4 left-[50%] translate-x-[-50%] bg-[rgba(23,23,23,0.7)] backdrop-blur-md border border-white/15 rounded-xl p-3 flex gap-6 shadow-xl transition-all duration-300 ease-in-out hover:bg-[rgba(30,30,30,0.8)] hover:border-white/25"
   >
     <div class="text-sm flex items-center gap-2 text-white/90">
       <div class="flex items-center">

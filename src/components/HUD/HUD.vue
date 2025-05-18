@@ -19,26 +19,6 @@ const { sceneManager } = storeToRefs(sceneStore);
 // Reference to the zoom control component
 const zoomControlRef = ref();
 
-// Add computed property for current camera view
-// const currentCameraView = computed(() => {
-//   if (sceneManager.value) {
-//     // Get the view from scene manager and convert to display name
-//     const view = sceneManager.value.getCurrentCameraView();
-
-//     switch (view) {
-//       case CameraView.DEFAULT:
-//         return "Default";
-//       case CameraView.TOP_DOWN:
-//         return "Top Down";
-//       case CameraView.CHASE:
-//         return "Chase";
-//       default:
-//         return "Unknown";
-//     }
-//   }
-//   return "";
-// });
-
 // Method to update zoom value from external input
 const updateZoomFromCamera = (cameraDistance: number) => {
   zoomControlRef.value?.updateZoomFromCamera(cameraDistance);
@@ -60,12 +40,7 @@ defineExpose({
   <div
     class="absolute bottom-5 right-5 w-[350px] flex flex-col gap-4 font-mono text-white text-shadow"
   >
-    <!-- <div class="camera-view-indicator" v-if="sceneManager && currentCameraView">
-      Camera: {{ currentCameraView }}
-    </div> -->
-    <!-- <RocketSelector /> -->
     <LevelInfoBar />
-    <!-- <StatusBar /> -->
     <VelocityIndicator />
     <FuelGauge />
     <GameResults />
