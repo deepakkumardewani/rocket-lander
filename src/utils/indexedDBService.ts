@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 
 interface UserProgress {
   userId: string;
+  username: string;
   unlockedSeaTextures: string[];
   unlockedSpaceTextures: string[];
   completedSeaLevels: number;
@@ -56,11 +57,17 @@ class IndexedDBService {
 
     // Try to get existing user data from localStorage first
     const userId = localStorage.getItem("rocketLanderUserId");
+    const username = localStorage.getItem("rocketLanderUsername") || "";
 
     if (userId) {
       try {
         const userProgress = await this.getUserById(userId);
         if (userProgress) {
+          // Update the username if it exists in localStorage but not in the DB record
+          if (username && !userProgress.username) {
+            userProgress.username = username;
+            await this.saveUserProgress(userProgress);
+          }
           return userProgress;
         }
       } catch (error) {
@@ -74,6 +81,7 @@ class IndexedDBService {
 
     const newUserProgress: UserProgress = {
       userId: newUserId,
+      username: username,
       unlockedSeaTextures: ["vintage"],
       unlockedSpaceTextures: ["platform_1"],
       completedSeaLevels: 0,

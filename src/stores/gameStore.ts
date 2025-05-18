@@ -16,6 +16,7 @@ import type {
 
 import indexedDBService from "../utils/indexedDBService";
 
+import { setWindStrength } from "../game/physics";
 import { seaLevels, spaceLevels } from "../lib/levelConfig";
 import { rocketModels } from "../lib/rocketConfig";
 
@@ -153,12 +154,14 @@ export const useGameStore = defineStore("game", () => {
   async function saveUserProgress(): Promise<void> {
     try {
       const userId = localStorage.getItem("rocketLanderUserId");
-      if (!userId) return;
+      const username = localStorage.getItem("rocketLanderUsername");
+      if (!userId || !username) return;
 
       // Create a clean serializable copy of the data
       const serializedHighScores = [...achievements.value.highScores];
 
       await indexedDBService.saveUserProgress({
+        username,
         userId,
         unlockedSeaTextures: [...unlockedTextures.value.sea].map((texture) => texture as string),
         unlockedSpaceTextures: [...unlockedTextures.value.space].map(
@@ -287,8 +290,6 @@ export const useGameStore = defineStore("game", () => {
    */
   function checkForRocketUnlocks(landingMetrics?: LandingMetrics): void {
     let newlyUnlockedRockets: string[] = [];
-
-    console.log(landingMetrics);
 
     // Update achievement stats if landing metrics provided
     if (landingMetrics) {
@@ -590,6 +591,7 @@ export const useGameStore = defineStore("game", () => {
       }
     }
 
+    setWindStrength(0);
     fuel.value = levelFuel;
     score.value = 0;
     isLanded.value = false;
