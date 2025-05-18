@@ -1,14 +1,14 @@
 import { initializeApp } from "firebase/app";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDFUncTAzNoefq45KIvntJGbkRv98vhDqY",
-  authDomain: "rocker-lander-d6571.firebaseapp.com",
-  databaseURL: "https://rocker-lander-d6571-default-rtdb.firebaseio.com",
-  projectId: "rocker-lander-d6571",
-  storageBucket: "rocker-lander-d6571.firebasestorage.app",
-  messagingSenderId: "1079006229109",
-  appId: "1:1079006229109:web:e29d3a66dde390affdbe3c",
-  measurementId: "G-W06G2M4JMZ"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 export const firebaseApp = initializeApp(firebaseConfig);
