@@ -3,6 +3,7 @@ import * as THREE from "three";
 
 import { handleRenderingError } from "../utils/errorHandler";
 
+import { ParticleSystem } from "./particleSystem";
 import { createPhysicsMaterial, world } from "./physics";
 
 /**
@@ -37,6 +38,7 @@ export class Platform {
     amplitude: number;
     frequency: number;
   };
+  private dustParticles: ParticleSystem | null = null;
 
   /**
    * Create a new landing platform
@@ -108,6 +110,9 @@ export class Platform {
       // Add body to physics world
       world.addBody(this.body);
 
+      // Initialize dust particles
+      this.initDustParticles();
+
       // Store a reference to this object for easier access in collision handling
       this.mesh.userData.owner = this;
       // Use type assertion for userData since it's not in the type definition
@@ -115,6 +120,98 @@ export class Platform {
     } catch (error) {
       handleRenderingError("Failed to create platform", error as Error);
       throw error; // Re-throw to prevent creating an invalid object
+    }
+  }
+
+  /**
+   * Initialize dust particle system for the landing effect
+   */
+  private initDustParticles(): void {
+    this.dustParticles = new ParticleSystem({
+      count: 200, // Higher count for more dense dust
+      color: 0xeeeeee, // Light gray/white dust
+      size: 0.5,
+      lifetime: 3, // Longer lifetime to linger in the air
+      maxParticlesPerFrame: 30,
+      colorVariation: true,
+      colorRange: [0xdddddd, 0xaaaaaa], // From light gray to medium gray
+      sizeVariation: [0.2, 0.8], // Variation in particle sizes
+      alphaVariation: true,
+      alphaRange: [0.3, 0.7] // Semi-transparent particles
+    });
+  }
+
+  /**
+   * Trigger dust particles when rocket is near platform and using thrusters
+   * @param rocketPosition Current rocket position
+   * @param isThrusting Whether the rocket is currently thrusting
+   * @param rocketVelocity Current rocket velocity vector
+   */
+  public triggerLandingDust(
+    rocketPosition: THREE.Vector3,
+    isThrusting: boolean,
+    rocketVelocity: THREE.Vector3
+  ): void {
+    if (!this.dustParticles) return;
+
+    // Get platform position and dimensions
+    const platformPosition = new THREE.Vector3().copy(this.body.position as any);
+    const platformSize = new THREE.Vector3(
+      (this.body.shapes[0] as CANNON.Box).halfExtents.x * 2,
+      (this.body.shapes[0] as CANNON.Box).halfExtents.y * 2,
+      (this.body.shapes[0] as CANNON.Box).halfExtents.z * 2
+    );
+
+    // Calculate height of rocket above platform
+    const heightAbovePlatform = rocketPosition.y - (platformPosition.y + platformSize.y / 2);
+
+    // Only trigger dust if rocket is close to platform, thrusting, and moving downward
+    const proximityThreshold = 5; // Distance at which dust starts to appear
+    // const velocityThreshold = -0.5; // Negative velocity means moving downward
+
+    if (
+      heightAbovePlatform < proximityThreshold &&
+      heightAbovePlatform > 0 &&
+      isThrusting &&
+      rocketVelocity.y < 0
+    ) {
+      // Calculate dust intensity based on proximity and velocity
+      const proximityFactor = 1 - heightAbovePlatform / proximityThreshold;
+      const velocityFactor = Math.min(Math.abs(rocketVelocity.y) / 5, 1);
+      const intensity = proximityFactor * velocityFactor;
+
+      // Calculate particles to spawn based on intensity
+      const particlesToSpawn = Math.floor(25 * intensity);
+
+      // Spawn particles at random positions across the platform top surface
+      for (let i = 0; i < particlesToSpawn; i++) {
+        // Random position on platform top surface
+        const randomX = platformPosition.x + (Math.random() - 0.5) * platformSize.x * 0.8; // 80% of platform width
+        const randomZ = platformPosition.z + (Math.random() - 0.5) * platformSize.z * 0.8; // 80% of platform depth
+
+        // Position particles at the platform surface
+        const spawnPos = new THREE.Vector3(
+          randomX,
+          platformPosition.y + platformSize.y / 2 + 0.1, // Just above platform
+          randomZ
+        );
+
+        // Direction outward from center with upward component
+        const dirToEdge = new THREE.Vector3(
+          randomX - platformPosition.x,
+          0.5 + Math.random() * 0.5, // Upward component
+          randomZ - platformPosition.z
+        ).normalize();
+
+        // Spawn the particles
+        this.dustParticles.spawn(
+          spawnPos,
+          dirToEdge,
+          Math.PI / 4, // 45 degree spread
+          2 + Math.random() * 3 * intensity, // Speed based on intensity
+          1 // Spawn 1 particle per call to avoid clumping
+        );
+      }
     }
   }
 
@@ -166,6 +263,17 @@ export class Platform {
   }
 
   /**
+   * Update dust particles if active
+   * @param deltaTime Time elapsed since last update
+   * @param camera Camera for culling particles
+   */
+  updateDust(deltaTime: number, camera?: THREE.Camera): void {
+    if (this.dustParticles) {
+      this.dustParticles.update(deltaTime, camera);
+    }
+  }
+
+  /**
    * Change the platform's texture
    * @param texture The new texture to apply
    */
@@ -181,6 +289,14 @@ export class Platform {
    */
   getMesh(): THREE.Mesh {
     return this.mesh;
+  }
+
+  /**
+   * Get the dust particles system
+   * @returns The dust particle system or null if not initialized
+   */
+  getDustParticles(): ParticleSystem | null {
+    return this.dustParticles;
   }
 
   /**
@@ -208,6 +324,11 @@ export class Platform {
    */
   addToScene(scene: THREE.Scene): void {
     scene.add(this.mesh);
+
+    // Add dust particles to the scene
+    if (this.dustParticles) {
+      scene.add(this.dustParticles.getMesh());
+    }
   }
 
   /**
@@ -216,6 +337,11 @@ export class Platform {
    */
   removeFromScene(scene: THREE.Scene): void {
     scene.remove(this.mesh);
+
+    // Remove dust particles from the scene
+    if (this.dustParticles) {
+      scene.remove(this.dustParticles.getMesh());
+    }
   }
 
   /**
@@ -236,6 +362,12 @@ export class Platform {
       } else {
         this.mesh.material.dispose();
       }
+    }
+
+    // Dispose of dust particles
+    if (this.dustParticles) {
+      this.dustParticles.dispose();
+      this.dustParticles = null;
     }
   }
 }

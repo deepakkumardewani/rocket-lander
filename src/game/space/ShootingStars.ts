@@ -97,11 +97,6 @@ export class ShootingStars {
 
     opacityAttr.needsUpdate = true;
     sizeAttr.needsUpdate = true;
-
-    // Log successful creation
-    console.log(
-      `Created shooting stars system with max ${maxShootingStars} stars, each with trail length ${maxTrailLength}`
-    );
   }
 
   /**
@@ -192,13 +187,6 @@ export class ShootingStars {
     (this.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
     (this.geometry.attributes.opacity as THREE.BufferAttribute).needsUpdate = true;
     (this.geometry.attributes.size as THREE.BufferAttribute).needsUpdate = true;
-
-    // Log shooting star spawn
-    console.log(
-      `Shooting star spawned at position (${startPos.x.toFixed(
-        2
-      )}, ${startPos.y.toFixed(2)}, ${startPos.z.toFixed(2)})`
-    );
   }
 
   /**

@@ -11,6 +11,13 @@ import { Nebula } from "./space/Nebula";
 import { ShootingStars } from "./space/ShootingStars";
 import { StarField } from "./space/StarField";
 
+// Camera view types
+export enum CameraView {
+  DEFAULT = "default",
+  TOP_DOWN = "top-down",
+  CHASE = "chase"
+}
+
 /**
  * Creates and configures the Three.js scene
  * @returns The created scene
@@ -121,6 +128,7 @@ export class SceneManager {
   public scene: THREE.Scene;
   public camera: THREE.PerspectiveCamera;
   public renderer: THREE.WebGLRenderer;
+  public pipRenderer: THREE.WebGLRenderer;
   public controls: OrbitControls;
   private skybox: THREE.Mesh | null;
   private sky: Sky | null = null;
@@ -145,6 +153,17 @@ export class SceneManager {
   private cubeCamera: THREE.CubeCamera | null = null;
   private cubeRenderTarget: THREE.WebGLCubeRenderTarget | null = null;
 
+  // Camera view state
+  private currentCameraView: CameraView = CameraView.DEFAULT;
+  private defaultCameraPosition: THREE.Vector3 = new THREE.Vector3(0, 20, 30);
+  private defaultCameraTarget: THREE.Vector3 = new THREE.Vector3(0, 10, 0);
+  private rocketRef: THREE.Object3D | null = null;
+  private platformXPosition: number = 0;
+
+  // PIP (Picture-in-Picture) camera
+  public pipCamera: THREE.PerspectiveCamera;
+  private hasPIP: boolean = true;
+
   constructor(container: HTMLElement) {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
@@ -153,11 +172,35 @@ export class SceneManager {
       0.1,
       1000
     );
+
+    // Main renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // PIP renderer
+    this.pipRenderer = new THREE.WebGLRenderer({ antialias: true });
+    const pipSize = Math.min(window.innerWidth, window.innerHeight) * 0.3;
+    this.pipRenderer.setSize(pipSize, pipSize);
+    this.pipRenderer.domElement.style.position = "absolute";
+    this.pipRenderer.domElement.style.left = "10px";
+    this.pipRenderer.domElement.style.bottom = "10px";
+    this.pipRenderer.domElement.style.borderRadius = "8px";
+    this.pipRenderer.domElement.style.border = "2px solid rgba(255, 255, 255, 0.2)";
+
     this.skybox = null;
+
+    // Initialize PIP camera with narrow FOV for landing pad view
+    this.pipCamera = new THREE.PerspectiveCamera(
+      35, // Narrower FOV for more focused view
+      1, // Square aspect ratio for the PIP view
+      0.1,
+      100 // Shorter far plane to limit view distance
+    );
+    // Initial position will be set in updatePIPCamera
 
     this.setupScene();
     container.appendChild(this.renderer.domElement);
+    container.appendChild(this.pipRenderer.domElement);
 
     // Initialize OrbitControls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
@@ -765,6 +808,12 @@ export class SceneManager {
     const deltaTime = (currentTime - this.lastUpdateTime) / 1000; // Convert to seconds
     this.lastUpdateTime = currentTime;
 
+    // Update dynamic camera views
+    this.updateCameraView();
+
+    // Update PIP camera
+    this.updatePIPCamera();
+
     // Update FPS counter
     this.fpsCounter.count++;
     if (currentTime > this.fpsCounter.lastTime + 1000) {
@@ -831,13 +880,16 @@ export class SceneManager {
       this.updateCubeCamera();
     }
 
-    // Render the scene with the main camera
-    this.renderer.render(this.scene, this.camera);
+    // No need to call renderer.render here as it's called in the render() method
   }
 
   public dispose(): void {
     // Remove event listeners
     window.removeEventListener("resize", this.handleResize);
+
+    // Dispose renderers
+    this.pipRenderer.dispose();
+    this.pipRenderer.domElement.remove();
 
     // Dispose controls
     if (this.controls) {
@@ -932,12 +984,65 @@ export class SceneManager {
   }
 
   /**
-   * Renders the current scene
+   * Renders the current scene with both main and PIP cameras
    */
   public render(): void {
-    if (this.renderer && this.scene && this.camera) {
-      this.renderer.render(this.scene, this.camera);
+    if (!this.renderer || !this.scene || !this.camera) return;
+
+    // Render main view
+    this.renderer.render(this.scene, this.camera);
+
+    // Render PIP view if enabled
+    if (this.hasPIP) {
+      this.pipRenderer.render(this.scene, this.pipCamera);
     }
+
+    // Show/hide PIP renderer based on state
+    this.pipRenderer.domElement.style.display = this.hasPIP ? "block" : "none";
+  }
+
+  /**
+   * Sets the platform's x position for camera positioning
+   * @param x The x position of the platform
+   */
+  public setPlatformXPosition(x: number): void {
+    this.platformXPosition = x;
+  }
+
+  /**
+   * Updates the PIP camera position based on rocket position
+   */
+  private updatePIPCamera(): void {
+    // Fixed camera position slightly elevated and offset from the landing pad
+    const cameraPos = new THREE.Vector3(
+      this.platformXPosition + 2, // Slightly offset from platform center
+      4, // Fixed height
+      30 // Fixed distance from platform
+    );
+    this.pipCamera.position.copy(cameraPos);
+
+    // Look at the center of the landing platform at ground level
+    const lookAtPos = new THREE.Vector3(
+      this.platformXPosition, // Center of platform
+      0, // Ground level
+      0 // Platform Z position
+    );
+    this.pipCamera.lookAt(lookAtPos);
+  }
+
+  /**
+   * Toggles the PIP view on/off
+   */
+  public togglePIP(): void {
+    this.hasPIP = !this.hasPIP;
+  }
+
+  /**
+   * Gets whether the PIP view is enabled
+   * @returns Boolean indicating if PIP view is enabled
+   */
+  public isPIPEnabled(): boolean {
+    return this.hasPIP;
   }
 
   /**
@@ -946,5 +1051,154 @@ export class SceneManager {
    */
   public hasSky(): boolean {
     return this.sky !== null;
+  }
+
+  /**
+   * Updates the current camera view
+   */
+  public updateCameraView(): void {
+    if (this.currentCameraView === CameraView.CHASE && this.rocketRef) {
+      // Calculate position behind the rocket based on its orientation
+      const rocketPosition = this.rocketRef.position.clone();
+
+      // Get rocket's forward direction (assuming it points up in local space)
+      const matrix = new THREE.Matrix4();
+      matrix.extractRotation(this.rocketRef.matrix);
+      const up = new THREE.Vector3(0, 1, 0).applyMatrix4(matrix).normalize();
+
+      // Position camera behind and slightly above the rocket
+      const cameraOffset = new THREE.Vector3().copy(up).multiplyScalar(-15);
+      cameraOffset.y += 5; // Add some height
+
+      const cameraPosition = rocketPosition.clone().add(cameraOffset);
+
+      // Smoothly move the camera (with some lag for better feel)
+      this.camera.position.lerp(cameraPosition, 0.1);
+
+      // Look at position slightly ahead of the rocket
+      const lookAtPosition = rocketPosition.clone().add(up.clone().multiplyScalar(10));
+      this.controls.target.lerp(lookAtPosition, 0.1);
+      this.controls.update();
+    }
+  }
+
+  /**
+   * Cycles to the next camera view
+   */
+  public cycleCamera(): void {
+    const views = Object.values(CameraView);
+    const currentIndex = views.indexOf(this.currentCameraView);
+    const nextIndex = (currentIndex + 1) % views.length;
+    this.setCameraView(views[nextIndex]);
+  }
+
+  /**
+   * Sets the camera to a specific view
+   * @param view The camera view to set
+   */
+  public setCameraView(view: CameraView): void {
+    this.currentCameraView = view;
+
+    // Store original control state to restore after transition
+    const controlsWereEnabled = this.controls.enabled;
+
+    // Temporarily disable controls during transition
+    this.controls.enabled = false;
+
+    // Set up camera based on view type
+    switch (view) {
+      case CameraView.DEFAULT:
+        this.transitionCameraTo(
+          this.defaultCameraPosition.clone(),
+          this.defaultCameraTarget.clone()
+        );
+        break;
+
+      case CameraView.TOP_DOWN:
+        // Position camera high above the rocket/platform looking straight down
+        this.transitionCameraTo(new THREE.Vector3(0, 60, 0), new THREE.Vector3(0, 0, 0));
+        break;
+
+      case CameraView.CHASE:
+        // Chase view will be updated dynamically in updateCameraView
+        // Just set up an initial position behind the rocket
+        if (this.rocketRef) {
+          const rocketPosition = this.rocketRef.position.clone();
+          this.transitionCameraTo(
+            new THREE.Vector3(rocketPosition.x - 5, rocketPosition.y + 5, rocketPosition.z + 15),
+            rocketPosition
+          );
+        }
+        break;
+    }
+
+    // Restore original control state after transition
+    setTimeout(() => {
+      this.controls.enabled = controlsWereEnabled;
+    }, 1000); // Enable after transition completes
+  }
+
+  /**
+   * Smoothly transitions the camera to a new position and target
+   */
+  private transitionCameraTo(
+    targetPosition: THREE.Vector3,
+    targetLookAt: THREE.Vector3,
+    duration: number = 1000
+  ): void {
+    const startPosition = this.camera.position.clone();
+    const startTarget = this.controls.target.clone();
+    const startTime = performance.now();
+
+    const animateCameraTransition = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Use easing function for smoother transition
+      const eased = this.easeOutCubic(progress);
+
+      // Interpolate position and target
+      this.camera.position.lerpVectors(startPosition, targetPosition, eased);
+      this.controls.target.lerpVectors(startTarget, targetLookAt, eased);
+
+      // Update controls
+      this.controls.update();
+
+      if (progress < 1) {
+        requestAnimationFrame(animateCameraTransition);
+      }
+    };
+
+    animateCameraTransition();
+  }
+
+  /**
+   * Easing function for smoother camera animation
+   */
+  private easeOutCubic(x: number): number {
+    return 1 - Math.pow(1 - x, 3);
+  }
+
+  /**
+   * Gets the current camera view
+   */
+  public getCurrentCameraView(): CameraView {
+    return this.currentCameraView;
+  }
+
+  /**
+   * Sets default camera position and target for reset operations
+   */
+  public setDefaultCameraPositionAndTarget(position: THREE.Vector3, target: THREE.Vector3): void {
+    this.defaultCameraPosition = position.clone();
+    this.defaultCameraTarget = target.clone();
+  }
+
+  /**
+   * Sets the rocket reference for camera tracking
+   * @param rocket The rocket mesh to track with certain camera views
+   */
+  public setRocketRef(rocket: THREE.Object3D): void {
+    this.rocketRef = rocket;
   }
 }

@@ -50,15 +50,6 @@ function isLandingTarget(body: CANNON.Body): boolean {
 }
 
 /**
- * Checks if a body is a primary landing target
- * @param body The physics body to check
- * @returns True if body is the primary landing target
- */
-function isPrimaryLandingTarget(body: CANNON.Body): boolean {
-  return landingTargets.get(body) === true;
-}
-
-/**
  * Checks if a landing was successful based on criteria
  * @param rocketBody The rocket's physics body
  * @returns Object with success flag and detailed metrics
@@ -146,51 +137,10 @@ export function setupCollisionDetection(
 
       // Check collision type based on the object hit
       if (isLandingTarget(event.body)) {
-        console.log("Collision detected between rocket and potential landing surface");
-
-        // For Sea Level 4, only allow landing on the primary target
-        const isSeaLevel4 = gameStore.environment === "sea" && gameStore.currentLevel === 4;
+        // console.log("Collision detected between rocket and potential landing surface");
 
         // Check if landing was successful
         const landingResult = checkLandingSuccess(rocketBody);
-
-        // For Sea Level 4, if it's not the primary target, always count as crash
-        if (isSeaLevel4 && !isPrimaryLandingTarget(event.body)) {
-          gameStore.setGameState("crashed");
-          console.log("Landing failed: Wrong platform - you must land on the green platform");
-
-          // Store the landing metrics for crash display
-          gameStore.calculateScore(landingResult.metrics);
-
-          // Get rocket mesh from userData
-          const rocketMesh = (rocketBody as any).userData?.owner?.mesh;
-          const scene = rocketMesh?.parent;
-
-          // Create enhanced crash effect
-          const position = new THREE.Vector3(
-            rocketBody.position.x,
-            rocketBody.position.y,
-            rocketBody.position.z
-          );
-
-          createCrashEffect({
-            position,
-            rocketMesh,
-            scene
-          });
-
-          // Hide the original rocket mesh
-          if (rocketMesh) {
-            rocketMesh.visible = false;
-          }
-
-          // Call crash callback if provided
-          if (onCrash) {
-            onCrash();
-          }
-
-          return;
-        }
 
         if (landingResult.success) {
           // Successful landing - stop rocket movement
@@ -271,14 +221,6 @@ export function setupCollisionDetection(
           }
         };
         gameStore.calculateScore(crashMetrics);
-
-        // Check if collision is with an obstacle
-        const isMeshObstacle = event.body.collisionFilterGroup === 2;
-        console.log(
-          isMeshObstacle
-            ? "Rocket crashed into an obstacle"
-            : "Rocket crashed into terrain or other object"
-        );
 
         // Get rocket mesh from userData
         const rocketMesh = (rocketBody as any).userData?.owner?.mesh;

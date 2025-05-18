@@ -27,7 +27,9 @@ export class InputHandler {
       "r",
       "R",
       "n",
-      "N"
+      "N",
+      "e",
+      "E"
     ];
     gameControls.forEach((key) => {
       this.keyStates.set(key, false);
@@ -53,9 +55,19 @@ export class InputHandler {
   private handleKeyDown(event: KeyboardEvent): void {
     // Prevent default behavior for game control keys
     if (
-      ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "r", "R", "n", "N"].includes(
-        event.key
-      )
+      [
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowUp",
+        "ArrowDown",
+        " ",
+        "r",
+        "R",
+        "n",
+        "N",
+        "e",
+        "E"
+      ].includes(event.key)
     ) {
       event.preventDefault();
     }
@@ -118,14 +130,14 @@ export class InputHandler {
    * Check if left tilt control is active
    */
   public isTiltLeft(): boolean {
-    return this.isKeyDown("ArrowLeft");
+    return this.isKeyDown("ArrowLeft") || this.isKeyDown("a") || this.isKeyDown("A");
   }
 
   /**
    * Check if right tilt control is active
    */
   public isTiltRight(): boolean {
-    return this.isKeyDown("ArrowRight");
+    return this.isKeyDown("ArrowRight") || this.isKeyDown("d") || this.isKeyDown("D");
   }
 
   /**
@@ -147,6 +159,20 @@ export class InputHandler {
    */
   public isNextLevelPressed(): boolean {
     return this.isKeyPressed("n") || this.isKeyPressed("N");
+  }
+
+  /**
+   * Check if environment select key was just pressed
+   */
+  public isEnvSelectPressed(): boolean {
+    return this.isKeyPressed("e") || this.isKeyPressed("E");
+  }
+
+  /**
+   * Check if camera toggle key was just pressed
+   */
+  public isCameraTogglePressed(): boolean {
+    return this.isKeyPressed("c") || this.isKeyPressed("C");
   }
 
   /**
@@ -178,7 +204,9 @@ export class InputHandler {
       "r",
       "R",
       "n",
-      "N"
+      "N",
+      "e",
+      "E"
     ];
     gameControls.forEach((key) => {
       this.keyStates.set(key, false);
@@ -191,7 +219,6 @@ export class InputHandler {
       window.addEventListener("keydown", this.boundKeydownHandler);
       window.addEventListener("keyup", this.boundKeyupHandler);
       this.initialized = true;
-      console.log("InputHandler successfully reset and reinitialized");
     } catch (error) {
       handleInputError("Failed to reinitialize input handlers", error as Error);
     }

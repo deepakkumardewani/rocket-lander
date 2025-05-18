@@ -98,9 +98,6 @@ export class StarField {
 
     // Create points object
     this.points = new THREE.Points(this.geometry, this.material);
-
-    // Log successful creation
-    console.log(`Created star field with ${starCount} stars`);
   }
 
   /**
@@ -124,14 +121,6 @@ export class StarField {
       material.alphaMap = this.texture;
       material.alphaTest = 0.01;
     }
-
-    // Log material configuration
-    console.log("Star material created with settings:", {
-      size: this.maxSize,
-      sizeAttenuation: true,
-      vertexColors: true,
-      hasTexture: !!this.texture
-    });
 
     return material;
   }
@@ -239,9 +228,6 @@ export class StarField {
     this.geometry.setAttribute("position", new THREE.BufferAttribute(this.positions, 3));
     this.geometry.setAttribute("color", new THREE.BufferAttribute(this.colors, 3));
     this.geometry.setAttribute("size", new THREE.BufferAttribute(this.sizes, 1));
-
-    // Log star generation
-    console.log(`Generated ${this.starCount} stars in spherical distribution with layering`);
   }
 
   /**
@@ -349,7 +335,6 @@ export class StarField {
     }
     this.geometry.dispose();
     this.material.dispose();
-    console.log("Star field disposed");
   }
 
   /**
