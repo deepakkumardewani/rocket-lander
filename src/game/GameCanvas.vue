@@ -1274,8 +1274,6 @@ const getPIPButtonClass = () => {
 
 <template>
   <div id="canvas" ref="canvasContainer" class="w-full h-full">
-    <OnlineUsersCount />
-
     <LoadingScreen v-if="isLoading" :progress="loadingProgress" />
 
     <div v-if="!isLoading && gameStore.gameState === 'waiting'" class="start-instruction">
@@ -1314,6 +1312,21 @@ const getPIPButtonClass = () => {
       >
         <SwitchCamera />
       </div>
+      <div v-if="!isLoading" class="x-button" title="X">
+        <a href="https://x.com/dewani_deepak" target="_blank" class="text-white">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="white"
+          >
+            <path
+              d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+            ></path>
+          </svg>
+        </a>
+      </div>
       <!-- PIP View Toggle Button -->
       <div
         v-if="!isLoading"
@@ -1323,6 +1336,7 @@ const getPIPButtonClass = () => {
       >
         <Focus class="h-6 w-6" />
       </div>
+      <OnlineUsersCount />
     </div>
   </div>
 </template>
@@ -1415,7 +1429,8 @@ const getPIPButtonClass = () => {
 }
 
 .pip-button,
-.pip-button-active {
+.pip-button-active,
+.x-button {
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
   padding: 8px 20px;
@@ -1435,7 +1450,8 @@ const getPIPButtonClass = () => {
   gap: 8px;
 }
 
-.pip-button:hover {
+.pip-button:hover,
+.x-button:hover {
   background-color: rgba(0, 0, 0, 0.85);
   border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
