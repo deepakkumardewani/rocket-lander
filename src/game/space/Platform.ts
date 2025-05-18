@@ -66,7 +66,7 @@ export class Platform {
       this.mesh.receiveShadow = true;
 
       // Create physics material
-      this.platformMaterial = createPhysicsMaterial("platform", 0.3, 0.8);
+      this.platformMaterial = createPhysicsMaterial("platform");
 
       // Create physics body (mass = 0 makes it static)
       const shape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, depth / 2));

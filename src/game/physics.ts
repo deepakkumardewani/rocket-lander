@@ -1,8 +1,9 @@
 import * as CANNON from "cannon-es";
 import * as THREE from "three";
 
-import { WIND_CHANGE_INTERVAL, WIND_CHANGE_SPEED } from "../constants";
 import { handlePhysicsError } from "../utils/errorHandler";
+
+import { WIND_CHANGE_INTERVAL, WIND_CHANGE_SPEED } from "../constants";
 
 // Create and configure the physics world
 export const world = new CANNON.World();
@@ -138,11 +139,7 @@ export function onCollision(
  * @param friction Material friction
  * @returns The created physics material
  */
-export function createPhysicsMaterial(
-  name: string,
-  restitution = 0.3,
-  friction = 0.5
-): CANNON.Material {
+export function createPhysicsMaterial(name: string): CANNON.Material {
   return new CANNON.Material(name);
 }
 

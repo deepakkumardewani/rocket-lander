@@ -204,7 +204,7 @@ export class Cloud {
     const updateFreq = distance > 8000 ? 4 : distance > 4000 ? 2 : 1;
     if (Cloud.updateCounter % updateFreq !== 0) return;
 
-    this.instanceIds.forEach((instanceId, index) => {
+    this.instanceIds.forEach((instanceId) => {
       Cloud.instancedMesh?.getMatrixAt(instanceId, Cloud.tempMatrix);
 
       // Extract position and update it

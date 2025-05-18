@@ -208,6 +208,7 @@ export class CelestialObjects {
       glowPower: 3.0
     });
 
+    this.planets.push(gasGiant, redPlanet, moon);
     return this.planets;
   }
 

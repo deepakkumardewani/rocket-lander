@@ -802,7 +802,7 @@ export class SceneManager {
    * Animation loop
    * @param delta Time since last frame in seconds
    */
-  public animate(delta: number): void {
+  public animate(): void {
     // Calculate delta time
     const currentTime = performance.now();
     const deltaTime = (currentTime - this.lastUpdateTime) / 1000; // Convert to seconds

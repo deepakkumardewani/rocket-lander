@@ -17,7 +17,7 @@ export class ShootingStars {
   private spawnInterval: number;
   private minSpawnInterval: number;
   private maxSpawnInterval: number;
-  private trailLength: number;
+  // private trailLength: number;
   private isPaused: boolean = false;
   private enabled: boolean = true;
 
@@ -39,7 +39,7 @@ export class ShootingStars {
     texture?: THREE.Texture | null;
   } = {}) {
     this.maxTrailLength = maxTrailLength;
-    this.trailLength = maxTrailLength;
+    // this.trailLength = maxTrailLength;
     this.minSpawnInterval = minSpawnInterval;
     this.maxSpawnInterval = maxSpawnInterval;
     this.spawnInterval = this.getRandomSpawnInterval();

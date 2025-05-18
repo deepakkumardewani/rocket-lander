@@ -118,7 +118,7 @@ function createFragmentBody(
   size: { width: number; height: number; depth: number }
 ): CANNON.Body {
   // Create physics material
-  const material = createPhysicsMaterial("rocketFragment", 0.3, 0.4);
+  const material = createPhysicsMaterial("rocketFragment");
 
   // Create a body with a box shape
   const body = new CANNON.Body({

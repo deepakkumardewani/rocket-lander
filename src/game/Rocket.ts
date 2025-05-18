@@ -73,7 +73,7 @@ export class Rocket {
       });
 
       // Create physics material
-      this.rocketMaterial = createPhysicsMaterial("rocket", 0.2, 0.5);
+      this.rocketMaterial = createPhysicsMaterial("rocket");
 
       // Create physics body using cylinder shape for collision
       // Use physics body dimensions from model config

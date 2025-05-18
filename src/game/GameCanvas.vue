@@ -423,7 +423,7 @@ const initializeGameScene = async () => {
 
         // Update scene manager animations
         if (sceneManager) {
-          sceneManager.animate(clampedDeltaTime);
+          sceneManager.animate();
         }
 
         // Render the scene
