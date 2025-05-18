@@ -21,6 +21,7 @@ const MAX_ZOOM = 100;
 
 // Emit zoom change event
 const handleZoomChange = (event: Event) => {
+  // console.log("handleZoomChange", event);
   const input = event.target as HTMLInputElement;
   const newZoom = parseFloat(input.value);
   zoomValue.value = newZoom;

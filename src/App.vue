@@ -1,28 +1,35 @@
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed, defineAsyncComponent, onMounted } from "vue";
 
 import EnvironmentSelector from "./components/EnvironmentSelector.vue";
-import RocketUnlockNotification from "./components/RocketUnlockNotification.vue";
-import TextureUnlockNotification from "./components/TextureUnlockNotification.vue";
-import GameCanvas from "./game/GameCanvas.vue";
 
+// import RocketUnlockNotification from "./components/RocketUnlockNotification.vue";
+// import TextureUnlockNotification from "./components/TextureUnlockNotification.vue";
 import { useGameStore } from "./stores/gameStore";
+import { usePresenceStore } from "./stores/presenceStore";
+import { useUserStore } from "./stores/userStore";
+
+// Lazy load GameCanvas
+const GameCanvas = defineAsyncComponent(() => import("./game/GameCanvas.vue"));
 
 const gameStore = useGameStore();
+const userStore = useUserStore();
+const presenceStore = usePresenceStore();
 
-// For debugging
-console.log("Initial environment:", gameStore.environment);
-watch(
-  () => gameStore.environment,
-  (newEnv) => {
-    console.log("Environment changed to:", newEnv);
+// Initialize username from localStorage if available
+onMounted(() => {
+  userStore.initUsername();
+  const userId = localStorage.getItem("rocketLanderUserId");
+  const username = localStorage.getItem("rocketLanderUsername");
+  if (userId && username) {
+    presenceStore.initPresence(userId, username);
   }
-);
+});
 
-// Show the game canvas when environment is selected
+// Show the game canvas when environment is selected and username is set
 const showGameCanvas = computed(() => gameStore.showGameCanvas);
 
-// Show environment selector when no environment is selected
+// Show environment selector when username is set but no environment is selected
 const showEnvironmentSelector = computed(() => gameStore.showGameCanvas === false);
 
 // Reset game to environment selection when game ends
@@ -38,11 +45,16 @@ const resetToSelector = () => {
       <EnvironmentSelector v-if="showEnvironmentSelector" />
 
       <!-- Game Canvas -->
-      <GameCanvas v-if="showGameCanvas" @game-end="resetToSelector" />
+      <Suspense v-else-if="showGameCanvas">
+        <GameCanvas @game-end="resetToSelector" />
+        <!-- <template #fallback>
+          <div class="text-white text-center">Loading game...</div>
+        </template> -->
+      </Suspense>
 
       <!-- Unlock Notifications -->
-      <TextureUnlockNotification />
-      <RocketUnlockNotification />
+      <!-- <TextureUnlockNotification />
+      <RocketUnlockNotification /> -->
     </div>
   </div>
 </template>

@@ -15,6 +15,7 @@
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
     "cannon-es": "^0.20.0",
+    "firebase": "^11.7.1",
     "lucide-vue-next": "^0.485.0",
     "pinia": "^3.0.1",
     "postcss": "^8.5.3",
@@ -23,7 +24,8 @@
     "uuid": "^11.1.0",
     "vue": "^3.5.13",
     "vue-3d-loader": "^2.2.4",
-    "vue-confetti-explosion": "^1.0.2"
+    "vue-confetti-explosion": "^1.0.2",
+    "vuefire": "^3.2.1"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^4.3.0",

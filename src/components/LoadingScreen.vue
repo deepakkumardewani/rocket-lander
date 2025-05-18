@@ -36,16 +36,16 @@ defineProps<{
 
       <h2 class="text-white text-2xl mb-4 font-bold">Preparing for Launch</h2>
 
-      <div class="text-[#a9c2ff] text-xl mb-6">Loading game assets: {{ progress.toFixed(2) }}%</div>
+      <!-- <div class="text-[#a9c2ff] text-xl mb-6">Loading game assets: {{ progress.toFixed(2) }}%</div> -->
 
-      <div
+      <!-- <div
         class="w-full h-3 bg-white/10 rounded-xl overflow-hidden shadow-[0_0_10px_rgba(169,194,255,0.3)]"
       >
         <div
           class="h-full bg-gradient-to-r from-indigo-600 to-cyan-500 rounded-xl transition-all duration-300 ease-out shadow-[0_0_8px_rgba(79,70,229,0.6)]"
           :style="`width: ${progress}%`"
         ></div>
-      </div>
+      </div> -->
 
       <div class="absolute inset-0 -z-10">
         <div

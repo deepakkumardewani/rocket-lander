@@ -4,14 +4,22 @@ import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { Environment } from "../types/storeTypes";
 
 import { useGameStore } from "../stores/gameStore";
+import { useUserStore } from "../stores/userStore";
 
 const gameStore = useGameStore();
+const userStore = useUserStore();
+
+const environmentSelectRef = ref<HTMLSelectElement | null>(null);
+const startButtonRef = ref<HTMLButtonElement | null>(null);
+const usernameInputRef = ref<HTMLInputElement | null>(null);
 
 // Default to space environment
 const selectedEnvironment = ref<Environment>("sea");
+const username = ref("");
+const errorMessage = ref("");
 
-// Start button is enabled when an environment is selected
-const isStartButtonDisabled = computed(() => !selectedEnvironment.value);
+// Start button is enabled when an environment is selected and username is entered
+const isStartButtonDisabled = computed(() => !selectedEnvironment.value || !username.value.trim());
 
 // Update the store when environment is selected
 const updateEnvironment = () => {
@@ -20,7 +28,18 @@ const updateEnvironment = () => {
 
 // Start the game
 const startGame = () => {
+  // Clear previous error messages
+  errorMessage.value = "";
+
+  // Validate username
+  if (!username.value.trim()) {
+    errorMessage.value = "Please enter your name";
+    return;
+  }
+
   if (selectedEnvironment.value) {
+    // Save the username
+    userStore.setUsername(username.value.trim());
     // Ensure the environment is set
     gameStore.setEnvironment(selectedEnvironment.value);
     // Start the game - this will keep it in waiting state
@@ -29,73 +48,67 @@ const startGame = () => {
 };
 
 // Animation for stars
-const starsRef = ref<HTMLDivElement | null>(null);
+// const starsRef = ref<HTMLDivElement | null>(null);
 let animationFrameId: number | null = null;
 
-const animateStars = () => {
-  if (!starsRef.value) return;
+// Handle keyboard navigation
+const handleKeydown = (event: KeyboardEvent) => {
+  const key = event.key;
+  const selectIsFocused = environmentSelectRef.value?.matches(":focus");
+  const buttonIsFocused = startButtonRef.value?.matches(":focus");
+  const inputIsFocused = usernameInputRef.value?.matches(":focus");
 
-  const stars = starsRef.value.querySelectorAll(".star");
-  stars.forEach((star) => {
-    const speed = parseFloat((star as HTMLElement).dataset.speed || "0.5");
-    let x = parseFloat((star as HTMLElement).style.left || "0");
-
-    // Update star position
-    x = (x - speed) % 100;
-    if (x < 0) x = 100 + x;
-    (star as HTMLElement).style.left = `${x}%`;
-  });
-
-  animationFrameId = requestAnimationFrame(animateStars);
-};
-
-// Generate stars for the background
-const generateStars = () => {
-  if (!starsRef.value) return;
-
-  const starsContainer = starsRef.value;
-  starsContainer.innerHTML = "";
-
-  // Create a number of stars with random positions and sizes
-  for (let i = 0; i < 100; i++) {
-    const star = document.createElement("div");
-    star.classList.add("star");
-
-    // Random position
-    const x = Math.random() * 100;
-    const y = Math.random() * 100;
-    star.style.left = `${x}%`;
-    star.style.top = `${y}%`;
-
-    // Random size
-    const size = 0.5 + Math.random() * 2;
-    star.style.width = `${size}px`;
-    star.style.height = `${size}px`;
-
-    // Random speed
-    const speed = 0.02 + Math.random() * 0.1;
-    star.dataset.speed = speed.toString();
-
-    // Random twinkle animation delay
-    const delay = Math.random() * 5;
-    star.style.animationDelay = `${delay}s`;
-
-    starsContainer.appendChild(star);
+  // If input is not focused and a letter/number is pressed, focus it
+  if (!inputIsFocused && event.key.length === 1 && event.key.match(/[a-zA-Z0-9]/)) {
+    usernameInputRef.value?.focus();
+    return;
   }
 
-  // Start animation
-  animateStars();
+  // Only handle keyboard events when our elements are focused
+  if (!selectIsFocused && !buttonIsFocused && !inputIsFocused) {
+    return;
+  }
+
+  // Toggle between environment options with left/right arrow keys when select is focused
+  if (selectIsFocused && (key === "ArrowLeft" || key === "ArrowRight")) {
+    if (selectedEnvironment.value === "sea") {
+      selectedEnvironment.value = "space";
+    } else {
+      selectedEnvironment.value = "sea";
+    }
+    updateEnvironment();
+    event.preventDefault();
+  }
+
+  // Start game with Enter when button is focused
+  if (selectIsFocused && key === "Enter" && !isStartButtonDisabled.value) {
+    startGame();
+    event.preventDefault();
+  }
 };
 
 onMounted(() => {
-  generateStars();
-  // gameStore.showGameCanvas = true;
+  // Focus username input initially
+  setTimeout(() => {
+    username.value = userStore.username;
+    if (userStore.username === "") {
+      usernameInputRef.value?.focus();
+    } else {
+      environmentSelectRef.value?.focus();
+    }
+  }, 100);
+
+  // Set up keyboard event listener
+  document.addEventListener("keydown", handleKeydown);
 });
 
 onUnmounted(() => {
   if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId);
   }
+
+  // Clean up keyboard event listener
+  document.removeEventListener("keydown", handleKeydown);
 });
 </script>
 
@@ -104,9 +117,9 @@ onUnmounted(() => {
     <!-- Animated background -->
     <div class="absolute inset-0 bg-gradient-to-b from-purple-900 via-blue-900 to-black"></div>
 
-    <!-- Star field -->
-    <div ref="starsRef" class="absolute inset-0 overflow-hidden">
-      <!-- Stars will be generated here -->
+    <!-- Star field (simplified for this component) -->
+    <div class="absolute inset-0 overflow-hidden">
+      <div class="stars"></div>
     </div>
 
     <!-- Nebula effect -->
@@ -126,10 +139,23 @@ onUnmounted(() => {
       </h1>
 
       <div class="mb-8 w-full">
+        <input
+          ref="usernameInputRef"
+          v-model="username"
+          type="text"
+          placeholder="Enter your name"
+          class="w-full px-4 py-3 rounded-lg bg-gray-800/80 border border-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 text-white backdrop-blur-sm transition-all hover:border-cyan-500 mb-2"
+          :class="{ 'border-red-500': errorMessage }"
+        />
+        <p v-if="errorMessage" class="mt-2 text-red-400 text-sm">{{ errorMessage }}</p>
+      </div>
+
+      <div class="mb-8 w-full">
         <label for="environment" class="block text-lg mb-3 text-cyan-100 font-medium"
           >Choose Your Mission Environment:</label
         >
         <select
+          ref="environmentSelectRef"
           id="environment"
           v-model="selectedEnvironment"
           @change="updateEnvironment"
@@ -138,36 +164,48 @@ onUnmounted(() => {
           <option value="space">Deep Space</option>
           <option value="sea">Ocean</option>
         </select>
+        <p class="mt-2 text-xs text-cyan-200/70">Use ← → arrows to change environment</p>
       </div>
 
       <button
+        ref="startButtonRef"
         @click="startGame"
         :disabled="isStartButtonDisabled"
         class="w-full px-8 py-4 text-lg font-bold rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 hover:shadow-lg"
       >
-        Launch Mission
+        Launch Mission <span class="opacity-70">(↵)</span>
       </button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.star {
+.stars {
   position: absolute;
-  background-color: white;
-  border-radius: 50%;
-  animation: twinkle 3s infinite alternate;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(2px 2px at 20px 30px, white, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 40px 70px, white, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 50px 160px, white, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 90px 40px, white, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 130px 80px, white, rgba(0, 0, 0, 0)),
+    radial-gradient(2px 2px at 160px 120px, white, rgba(0, 0, 0, 0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: twinkle 4s infinite;
 }
 
 @keyframes twinkle {
   0% {
-    opacity: 0.2;
+    opacity: 0.5;
   }
   50% {
     opacity: 1;
   }
   100% {
-    opacity: 0.2;
+    opacity: 0.5;
   }
 }
 

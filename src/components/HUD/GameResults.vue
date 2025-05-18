@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
+import { onMounted, watch } from "vue";
 
 import { useGameStore } from "../../stores/gameStore";
+import { useLeaderboardStore } from "../../stores/leaderboardStore";
 
 const gameStore = useGameStore();
+const leaderboardStore = useLeaderboardStore();
 const {
   score,
   gameState,
@@ -11,7 +14,10 @@ const {
   isLevelCompleted,
   crashMetrics,
   landingMetrics,
-  totalLevels
+  totalLevels,
+  environment,
+  fuel,
+  rocketModel
 } = storeToRefs(gameStore);
 
 // Format velocity for display
@@ -45,6 +51,43 @@ const handleRestartGame = () => {
   // Reset game state
   gameStore.resetGame();
 };
+
+// Submit score to leaderboard on successful landing
+const submitScoreToLeaderboard = async () => {
+  if (gameState.value !== "landed" || !landingMetrics.value) return;
+
+  const userId = localStorage.getItem("rocketLanderUserId");
+  const username = localStorage.getItem("rocketLanderUsername");
+
+  if (!userId || !username) return;
+
+  await leaderboardStore.submitScore({
+    uuid: userId,
+    username: username,
+    score: score.value,
+    environment: environment.value,
+    rocketId: rocketModel.value.id,
+    fuelRemaining: fuel.value,
+    landingVelocity: Math.abs(landingMetrics.value.velocity.y)
+  });
+};
+
+// Watch for successful landings and submit score
+watch(
+  () => gameState.value,
+  (newState) => {
+    if (newState === "landed") {
+      submitScoreToLeaderboard();
+    }
+  }
+);
+
+// Also check on component mount in case we missed the state change
+onMounted(() => {
+  if (gameState.value === "landed") {
+    submitScoreToLeaderboard();
+  }
+});
 </script>
 
 <template>
@@ -75,6 +118,11 @@ const handleRestartGame = () => {
         <div class="flex justify-center text-sm">
           <div class="font-bold">{{ formatVelocity(landingMetrics.velocity).y }} m/s</div>
         </div>
+      </div>
+
+      <!-- Leaderboard Status - show if score submitted -->
+      <div v-if="score > 150" class="text-sm text-yellow-400 my-2">
+        Score added to leaderboard! 🏆
       </div>
 
       <div
