@@ -29,7 +29,11 @@ export class InputHandler {
       "n",
       "N",
       "e",
-      "E"
+      "E",
+      "h",
+      "H",
+      "c",
+      "C"
     ];
     gameControls.forEach((key) => {
       this.keyStates.set(key, false);
@@ -66,7 +70,11 @@ export class InputHandler {
         "n",
         "N",
         "e",
-        "E"
+        "E",
+        "h",
+        "H",
+        "c",
+        "C"
       ].includes(event.key)
     ) {
       event.preventDefault();
@@ -176,6 +184,13 @@ export class InputHandler {
   }
 
   /**
+   * Check if help key was just pressed
+   */
+  public isHelpPressed(): boolean {
+    return this.isKeyPressed("h") || this.isKeyPressed("H");
+  }
+
+  /**
    * Check if the input handler is properly initialized
    */
   public isInitialized(): boolean {
@@ -206,7 +221,11 @@ export class InputHandler {
       "n",
       "N",
       "e",
-      "E"
+      "E",
+      "h",
+      "H",
+      "c",
+      "C"
     ];
     gameControls.forEach((key) => {
       this.keyStates.set(key, false);
