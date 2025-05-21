@@ -52,7 +52,7 @@ export const useGameStore = defineStore("game", () => {
   const shouldResetRocket = ref<boolean>(false);
   const rocketModel = ref<RocketModel>(rocketModels[0]);
   const rocketModelUrl = ref<string>(rocketModel.value.url);
-
+  const isInstructionsFirstLoad = ref<boolean>(true);
   // Texture unlocking
   const unlockedTextures = ref<UnlockedTextures>({
     sea: ["vintage" as TextureType],
@@ -667,7 +667,7 @@ export const useGameStore = defineStore("game", () => {
     unlockedRockets,
     achievements,
     rocketUnlockNotification,
-
+    isInstructionsFirstLoad,
     // Getters
     hasFuel,
     canFly,
