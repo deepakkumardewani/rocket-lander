@@ -413,7 +413,7 @@ onUnmounted(() => {
 .rocket-selector-button {
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
-  padding: 8px 20px;
+  padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
   font-family: "Arial", sans-serif;
