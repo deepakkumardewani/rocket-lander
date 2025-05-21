@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import * as CANNON from "cannon-es";
-import { Focus, Settings, SwitchCamera } from "lucide-vue-next";
+import { Focus, HelpCircle, Settings, SwitchCamera } from "lucide-vue-next";
 import * as THREE from "three";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
@@ -8,6 +8,7 @@ import { useGameStore } from "../stores/gameStore";
 import { useHudStore } from "../stores/hudStore";
 import { useSceneStore } from "../stores/sceneStore";
 
+import GameInstructions from "../components/GameInstructions.vue";
 // import EffectsPanel from "../components/EffectsPanel.vue";
 import HUD from "../components/HUD/HUD.vue";
 import LeaderboardDialog from "../components/LeaderboardDialog.vue";
@@ -68,6 +69,9 @@ const canvasContainer = ref<HTMLDivElement | null>(null);
 const isLoading = ref(true);
 const loadingProgress = ref(0);
 const isPIPEnabled = ref(false);
+const showStartPrompt = ref(false);
+const hudRef = ref<InstanceType<typeof HUD> | null>(null);
+const instructionsRef = ref<any>(null);
 
 let sceneManager: SceneManager | null = null;
 let rocket: Rocket | null = null;
@@ -76,7 +80,6 @@ let terrain: Terrain | null = null;
 let seaSurface: SeaSurface | null = null;
 let animationFrameId: number | null = null;
 let cleanupCollisionHandlers: (() => void) | null = null;
-const hudRef = ref<InstanceType<typeof HUD> | null>(null);
 let lastFrameTime = performance.now();
 let frameCount = 0; // Add frame counter for throttling updates
 
@@ -450,6 +453,12 @@ const initializeGameScene = async () => {
           // Reset game state with resetRocket flag
           gameStore.resetGame();
         }
+        return;
+      }
+
+      // Check for help key press to toggle instructions
+      if (inputHandler.isHelpPressed()) {
+        toggleInstructions();
         return;
       }
 
@@ -1165,6 +1174,19 @@ watch(
   }
 );
 
+// Watch for game state changes to init instructions visibility
+// watch(
+//   () => gameStore.gameState,
+//   (newState) => {
+//     if (instructionsRef.value) {
+//       // Only show instructions initially in waiting state
+//       if (newState === "waiting") {
+//         instructionsRef.value.showInstructions();
+//       }
+//     }
+//   }
+// );
+
 // Start loading process when the component is mounted
 onMounted(() => {
   gameStore.setCurrentLevel(1);
@@ -1270,27 +1292,41 @@ const togglePIPView = () => {
 const getPIPButtonClass = () => {
   return isPIPEnabled.value ? "pip-button-active" : "pip-button";
 };
+
+// Method to toggle instructions visibility
+const toggleInstructions = () => {
+  if (instructionsRef.value) {
+    instructionsRef.value.showInstructions();
+  }
+};
+
+// Handle instructions closed event
+const handleInstructionsClosed = () => {
+  showStartPrompt.value = true;
+};
 </script>
 
 <template>
   <div id="canvas" ref="canvasContainer" class="w-full h-full">
     <LoadingScreen v-if="isLoading" :progress="loadingProgress" />
 
-    <div v-if="!isLoading && gameStore.gameState === 'waiting'" class="start-instruction">
+    <GameInstructions
+      v-if="!isLoading"
+      ref="instructionsRef"
+      @instructions-closed="handleInstructionsClosed"
+    />
+
+    <div
+      v-if="!isLoading && gameStore.gameState === 'waiting' && showStartPrompt"
+      class="start-instruction"
+    >
       Press Space to Start
     </div>
 
-    <!-- HUD -->
     <HUD v-if="!isLoading && sceneManager" ref="hudRef" />
     <div class="flex flex-col items-start justify-start space-y-4 absolute top-2 left-2 w-full">
-      <!-- Effects Panel Component -->
-      <!-- <EffectsPanel
-        v-if="!isLoading && sceneManager && isDevelopment"
-        :scene-manager="sceneManager"
-      /> -->
-
       <LeaderboardDialog v-if="!isLoading" />
-      <!-- Back to Selection Button -->
+      <OnlineUsersCount />
       <div
         v-if="!isLoading"
         class="back-button"
@@ -1303,6 +1339,7 @@ const getPIPButtonClass = () => {
       <RocketSelector v-if="!isLoading" />
 
       <TextureSelector v-if="!isLoading" />
+
       <!-- Camera View Switch Button -->
       <div
         v-if="!isLoading"
@@ -1312,6 +1349,31 @@ const getPIPButtonClass = () => {
       >
         <SwitchCamera />
       </div>
+
+      <!-- PIP View Toggle Button -->
+      <div
+        v-if="!isLoading"
+        :class="getPIPButtonClass()"
+        @click="togglePIPView"
+        title="Toggle picture-in-picture view"
+      >
+        <Focus class="h-6 w-6" />
+      </div>
+    </div>
+
+    <!-- Top Right Buttons -->
+    <div class="flex flex-row items-start justify-end space-x-4 absolute top-2 right-2">
+      <!-- Help Button -->
+      <div
+        v-if="!isLoading"
+        class="help-button-ui"
+        @click="toggleInstructions"
+        title="Show game instructions"
+      >
+        <HelpCircle class="h-6 w-6" />
+      </div>
+
+      <!-- X Button -->
       <div v-if="!isLoading" class="x-button" title="X">
         <a href="https://x.com/dewani_deepak" target="_blank" class="text-white">
           <svg
@@ -1327,16 +1389,6 @@ const getPIPButtonClass = () => {
           </svg>
         </a>
       </div>
-      <!-- PIP View Toggle Button -->
-      <div
-        v-if="!isLoading"
-        :class="getPIPButtonClass()"
-        @click="togglePIPView"
-        title="Toggle picture-in-picture view"
-      >
-        <Focus class="h-6 w-6" />
-      </div>
-      <OnlineUsersCount />
     </div>
   </div>
 </template>
@@ -1349,25 +1401,10 @@ const getPIPButtonClass = () => {
   position: relative;
 }
 
-.start-instruction {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 2rem;
-  color: white;
-  text-shadow: 0 0 10px rgba(0, 200, 255, 0.8);
-  animation: pulse 1.5s infinite ease-in-out;
-  z-index: 10;
-  pointer-events: none;
-  font-family: "Arial", sans-serif;
-  letter-spacing: 2px;
-}
-
 .back-button {
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
-  padding: 8px 20px;
+  padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
   font-family: "Arial", sans-serif;
@@ -1399,7 +1436,7 @@ const getPIPButtonClass = () => {
 .camera-switch-button {
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
-  padding: 8px 20px;
+  padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
   font-family: "Arial", sans-serif;
@@ -1433,7 +1470,7 @@ const getPIPButtonClass = () => {
 .x-button {
   background-color: rgba(0, 0, 0, 0.7);
   color: white;
-  padding: 8px 20px;
+  padding: 6px 10px;
   border-radius: 8px;
   cursor: pointer;
   font-family: "Arial", sans-serif;
@@ -1478,5 +1515,64 @@ const getPIPButtonClass = () => {
 .pip-button-active:active {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.help-button-ui {
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: "Arial", sans-serif;
+  font-weight: 500;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  z-index: 20;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-button-ui:hover {
+  background-color: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.help-button-ui:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.start-instruction {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  color: white;
+  text-shadow: 0 0 10px rgba(0, 200, 255, 0.8);
+  animation: pulse 1.5s infinite ease-in-out;
+  z-index: 10;
+  pointer-events: none;
+  font-family: "Arial", sans-serif;
+  letter-spacing: 2px;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.6;
+  }
 }
 </style>
