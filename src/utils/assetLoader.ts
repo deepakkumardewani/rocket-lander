@@ -396,14 +396,9 @@ export class AssetLoader {
         return this.loadedSkyboxTextures;
       }
 
-      const paths = [
-        "/src/assets/skybox/space/right.png", // positive x
-        "/src/assets/skybox/space/left.png", // negative x
-        "/src/assets/skybox/space/top.png", // positive y
-        "/src/assets/skybox/space/bottom.png", // negative y
-        "/src/assets/skybox/space/front.png", // positive z
-        "/src/assets/skybox/space/back.png" // negative z
-      ];
+      const skybox =
+        "https://res.cloudinary.com/ddzuitkzt/image/upload/f_auto,q_auto/v1/rocket-lander/textures/skybox/space/space";
+      const paths = [skybox, skybox, skybox, skybox, skybox, skybox];
 
       // Load each texture separately
       const promises = paths.map((path) => {
