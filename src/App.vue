@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted } from "vue";
+import { computed, defineAsyncComponent, onMounted, ref } from "vue";
 
 import EnvironmentSelector from "./components/EnvironmentSelector.vue";
+import MobileMessage from "./components/MobileMessage.vue";
 
 // import RocketUnlockNotification from "./components/RocketUnlockNotification.vue";
 // import TextureUnlockNotification from "./components/TextureUnlockNotification.vue";
 import { useGameStore } from "./stores/gameStore";
 import { usePresenceStore } from "./stores/presenceStore";
 import { useUserStore } from "./stores/userStore";
+import { isMobileDevice } from "./utils/deviceDetection";
 
 // Lazy load GameCanvas
 const GameCanvas = defineAsyncComponent(() => import("./game/GameCanvas.vue"));
@@ -16,8 +18,14 @@ const gameStore = useGameStore();
 const userStore = useUserStore();
 const presenceStore = usePresenceStore();
 
+// Check if device is mobile
+const isMobile = ref(false);
+
 // Initialize username from localStorage if available
 onMounted(() => {
+  // Check device type
+  isMobile.value = isMobileDevice();
+
   userStore.initUsername();
   const userId = localStorage.getItem("rocketLanderUserId");
   const username = localStorage.getItem("rocketLanderUsername");
@@ -40,7 +48,11 @@ const resetToSelector = () => {
 
 <template>
   <div class="min-h-screen bg-gray-900 flex items-center justify-center">
-    <div class="w-full h-screen">
+    <!-- Mobile Message -->
+    <MobileMessage v-if="isMobile" />
+
+    <!-- Desktop Game -->
+    <div v-else class="w-full h-screen">
       <!-- Environment Selection UI -->
       <EnvironmentSelector v-if="showEnvironmentSelector" />
 
